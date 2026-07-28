@@ -37,6 +37,11 @@ Laskun lähetys sähköpostilla vaatii Cloud Functionin, joka vaatii Blaze (pay-
 
 Lisäksi tarvitaan tällöin **uusi** Gmail-sovellussalasana (myaccount.google.com → Turvallisuus → 2-vaiheinen vahvistus → Sovellussalasanat) — vanhan sovelluksen salasana ei toimi uudessa projektissa.
 
-## 7. GitHub Pages
+## 7. GitHub Pages (tee tämä heti, muuten sivu ei julkaisu vielä)
 
-Kun repo on luotu ja pushattu (teen tämän puolestasi), mene reposta Settings → Pages → Source: "Deploy from a branch" → Branch: main / (root) → Save. Tämän jälkeen `.github/workflows/static.yml` hoitaa julkaisun automaattisesti jokaisen pushin jälkeen.
+Repo `jackeseilaa/tilaukset-v2` on jo luotu ja pushattu, mutta ensimmäinen deploy epäonnistui koska Pages ei ole vielä päällä (GitHub vaatii tämän yhden käsin klikattavan asetuksen uudelle repolle, enkä pystynyt tekemään sitä automaattisesti komentoriviltä):
+
+1. github.com/jackeseilaa/tilaukset-v2 → Settings → Pages.
+2. "Build and deployment" → Source: **GitHub Actions** (EI "Deploy from a branch" — workflow käyttää `actions/deploy-pages`-toimintoa, joka vaatii tämän asetuksen).
+3. Tämän jälkeen mene Actions-välilehdelle ja aja epäonnistunut "Deploy static content to Pages" -ajo uudelleen ("Re-run all jobs"), tai tee mikä tahansa uusi push — se julkaisee automaattisesti jatkossa.
+4. Live-osoite tämän jälkeen: https://jackeseilaa.github.io/tilaukset-v2/
