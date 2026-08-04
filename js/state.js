@@ -25,10 +25,32 @@ export const initialState = {
   kyselyDraft: {nimi: "", puhelin: "", email: "", tyyppi: "purjehdus", aihe: "", lisatiedot: "", pvm: today()},
   kyselyQ: "",
 
-  // Varatut ajat (väliaikainen Dashboard-widget kunnes Kalenteri rakennetaan)
+  // Varatut ajat (modal==="block-day", hallitaan Kalenterista)
   blockEditId: null,
-  blockDraft: {date: today(), note: "", startTime: "", endTime: ""}
+  blockDraft: null,
+
+  // Purjehdukset (modal==="sailing")
+  sailingDraft: null,
+  searchSailings: "",
+  sailingGroup: "all",
+
+  // Kalenteri
+  calendarMonth: today().slice(0, 7),
+  calView: "month",
+  calDayDate: today()
 };
+
+export const SAILING_TYPES = ["Iltapurjehdus", "Päiväpurjehdus", "Charter", "Kurssi", "Yritystilaisuus", "Purjehdusretki", "Muu"];
+
+export const SAILING_GROUPS = [
+  {id: "all", label: "Kaikki", types: null},
+  {id: "courses", label: "Kurssit", types: ["Kurssi"]},
+  {id: "charter", label: "Charter", types: ["Charter"]},
+  {id: "evening", label: "Iltapurjehdukset", types: ["Iltapurjehdus"]},
+  {id: "trips", label: "Retket", types: ["Purjehdusretki"]},
+  {id: "day", label: "Päiväpurjehdukset", types: ["Päiväpurjehdus"]},
+  {id: "other", label: "Muut", types: ["Yritystilaisuus", "Muu"]}
+];
 
 export const NAV_TABS = [
   ["dashboard", "🧭 Dashboard"],

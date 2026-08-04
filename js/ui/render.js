@@ -8,13 +8,15 @@ import {renderSailingsView} from "./sailings-view.js";
 import {renderCalendarView} from "./calendar-view.js";
 import {renderCustomersView} from "./customers-view.js";
 import {renderCompaniesView, renderCompanyModal} from "./companies-view.js";
+import {renderSailingModal} from "./sailing-modal.js";
+import {renderBlockDayModal} from "./block-day-modal.js";
 import {renderInvoicingView} from "./invoicing-view.js";
 import {renderMuutTuotteetView} from "./muuttuotteet-view.js";
 import {renderReskontraView} from "./reskontra-view.js";
 import {renderTasmaytysView} from "./tasmaytys-view.js";
 import {renderKyselytView} from "./kyselyt-view.js";
 
-export const APP_VERSION = "V1.1.1";
+export const APP_VERSION = "V1.2.0";
 
 registerAction("set-tab", ({el, store}) => { store.setState({tab: el.dataset.tab}); });
 registerAction("close-modal", ({store}) => { store.setState({modal: null, editId: null}); });
@@ -64,7 +66,9 @@ function renderTab(state) {
 
 function renderModal(state) {
   if (state.modal === "company") return renderCompanyModal(state);
-  // Muut modaalit (purjehdus, lasku, jne.) täytetään myöhemmässä vaiheessa.
+  if (state.modal === "sailing") return renderSailingModal(state);
+  if (state.modal === "block-day") return renderBlockDayModal(state);
+  // Muut modaalit (lasku, tutkinto, jne.) täytetään myöhemmässä vaiheessa.
   return "";
 }
 

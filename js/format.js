@@ -22,3 +22,9 @@ export function fmtDateTime(iso) {
 export function genId(prefix) {
   return (prefix || "X") + Math.random().toString(36).slice(2, 10);
 }
+
+export function addDays(dateStr, n) {
+  const d = new Date(dateStr + "T12:00:00");
+  d.setDate(d.getDate() + n);
+  return d.toISOString().slice(0, 10);
+}
