@@ -37,7 +37,12 @@ export const initialState = {
   // Kalenteri
   calendarMonth: today().slice(0, 7),
   calView: "month",
-  calDayDate: today()
+  calDayDate: today(),
+
+  // Asiakkaat (modal==="customer")
+  customerDraft: null,
+  searchCustomers: "",
+  expandedPerson: null
 };
 
 export const SAILING_TYPES = ["Iltapurjehdus", "Päiväpurjehdus", "Charter", "Kurssi", "Yritystilaisuus", "Purjehdusretki", "Muu"];

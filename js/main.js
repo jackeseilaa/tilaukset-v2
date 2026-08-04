@@ -14,6 +14,7 @@ import "./kyselyt.js";
 import "./blocked-days.js";
 import "./sailings.js";
 import "./calendar.js";
+import "./customers.js";
 
 const store = createStore(initialState);
 const appEl = document.getElementById("app");
