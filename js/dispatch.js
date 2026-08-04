@@ -33,11 +33,18 @@ export function initDispatch(rootEl, store) {
 
   // data-bind="polku.kentta" -kentät kirjoittavat suoraan state-olion polkuun
   // ilman että jokaiselle kentälle pitää käsin kirjoittaa oma addEventListener.
-  rootEl.addEventListener("input", (e) => {
+  // store.touch() pyytää uudelleenrenderöinnin (esim. hakukentät jotka
+  // suodattavat listaa elävästi) — render.js palauttaa fokuksen ja
+  // kursorin kohdan data-bind-attribuutin perusteella, joten kirjoitettu
+  // teksti ei katoa vaikka renderöinti ajetaan jokaisella näppäimellä.
+  const bindHandler = (e) => {
     const el = e.target.closest("[data-bind]");
     if (!el) return;
     setPath(store.getState(), el.dataset.bind, el.type === "checkbox" ? el.checked : el.value);
-  });
+    store.touch();
+  };
+  rootEl.addEventListener("input", bindHandler);
+  rootEl.addEventListener("change", bindHandler);
 }
 
 function setPath(obj, path, value) {

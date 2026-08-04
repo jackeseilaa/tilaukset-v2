@@ -1,4 +1,5 @@
 import {CONFIG_READY} from "../firebase.js";
+import {renderBlockedDaysWidget} from "./blocked-days-widget.js";
 
 export function renderDashboard(state) {
   return `<div class="card">
@@ -9,6 +10,7 @@ export function renderDashboard(state) {
       <div class="stat-card"><div class="stat-label">Yritykset</div><div class="stat-val">${state.companies.length}</div></div>
       <div class="stat-card"><div class="stat-label">Laskut</div><div class="stat-val">${state.invoices.length}</div></div>
     </div>
-    <div class="infobox infobox-blue">🚧 Runkovaihe: kirjautuminen ja reaaliaikainen data toimivat. Toiminnallisuus (purjehdusten hallinta, laskutus jne.) rakennetaan seuraavaksi vaihe kerrallaan suunnitelman mukaisesti.</div>
-  </div>`;
+    <div class="infobox infobox-blue">🚧 Rakenteilla: purjehdusten/kalenterin ja laskutuksen hallinta puuttuu vielä. Yritykset, muut tuotteet ja kyselyt toimivat jo omilla välilehdillään.</div>
+  </div>
+  ${renderBlockedDaysWidget(state)}`;
 }

@@ -6,6 +6,13 @@ import {startListeners, stopListeners} from "./listeners.js";
 import {render} from "./ui/render.js";
 import {CONFIG_READY} from "./firebase.js";
 
+// Domain-moduulit rekisteröivät omat toimintonsa (registerAction) sivuvaikutuksena
+// tuontihetkellä — tässä ei kutsuta mitään niistä suoraan.
+import "./companies.js";
+import "./muut-tuotteet.js";
+import "./kyselyt.js";
+import "./blocked-days.js";
+
 const store = createStore(initialState);
 const appEl = document.getElementById("app");
 
