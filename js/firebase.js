@@ -2,16 +2,13 @@ import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.0/firebase
 import {getAuth} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import {getFirestore} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-// TÄYTETÄÄN kun uusi Firebase-projekti on luotu konsolissa (ks. FIREBASE_SETUP.md).
-// Kunnes apiKey on vaihdettu, CONFIG_READY on false ja sovellus näyttää asetusbannerin
-// kirjautumisruudun sijaan (sama malli kuin vanhassa tilaukset-sovelluksessa).
 export const FIREBASE_CONFIG = {
-  apiKey: "KORVAA_UUDELLA_API_KEYLLA",
-  authDomain: "KORVAA.firebaseapp.com",
-  projectId: "KORVAA",
-  storageBucket: "KORVAA.firebasestorage.app",
-  messagingSenderId: "KORVAA",
-  appId: "KORVAA"
+  apiKey: "AIzaSyD1sZvqGgg7t1zPDtJwqRprSU3amKE8PiQ",
+  authDomain: "jsailing-tilaukset-v2.firebaseapp.com",
+  projectId: "jsailing-tilaukset-v2",
+  storageBucket: "jsailing-tilaukset-v2.firebasestorage.app",
+  messagingSenderId: "338087731935",
+  appId: "1:338087731935:web:fc811c9fd9834e13f43f6a"
 };
 
 export const ALLOWED_EMAIL = "jacke.seilaa@gmail.com";
