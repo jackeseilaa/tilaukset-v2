@@ -15,6 +15,7 @@ import "./blocked-days.js";
 import "./sailings.js";
 import "./calendar.js";
 import "./customers.js";
+import "./invoices.js";
 
 const store = createStore(initialState);
 const appEl = document.getElementById("app");

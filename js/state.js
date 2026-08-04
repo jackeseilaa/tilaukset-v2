@@ -42,7 +42,18 @@ export const initialState = {
   // Asiakkaat (modal==="customer")
   customerDraft: null,
   searchCustomers: "",
-  expandedPerson: null
+  expandedPerson: null,
+
+  // Laskutus
+  editInvoiceId: null,
+  invoiceDraft: {issuer: "tmi", sailingId: "", mode: "customer", type: "full", invoiceDate: today(), customerId: "", companyId: "", partialAmount: "", creditRefId: "", note: ""},
+  registerMonth: today().slice(0, 7),
+  registerIssuerFilter: "all"
+};
+
+export const ISSUERS = {
+  tmi: {name: "J Sailing", businessId: "1728993-9", address: "Kontiontie 55, 11120 Riihimäki", iban: "FI62 1132 3000 4277 43", bic: "NDEAFIHH"},
+  oy: {name: "AJarmo Oy", businessId: "3432355-3", address: "Kontiontie 55, 11120 Riihimäki", iban: "FI73 7997 7994 4257 05", bic: "HOLVFIHH"}
 };
 
 export const SAILING_TYPES = ["Iltapurjehdus", "Päiväpurjehdus", "Charter", "Kurssi", "Yritystilaisuus", "Purjehdusretki", "Muu"];

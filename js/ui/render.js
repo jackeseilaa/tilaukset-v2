@@ -17,7 +17,7 @@ import {renderReskontraView} from "./reskontra-view.js";
 import {renderTasmaytysView} from "./tasmaytys-view.js";
 import {renderKyselytView} from "./kyselyt-view.js";
 
-export const APP_VERSION = "V1.3.0";
+export const APP_VERSION = "V1.4.0";
 
 registerAction("set-tab", ({el, store}) => { store.setState({tab: el.dataset.tab}); });
 registerAction("close-modal", ({store}) => { store.setState({modal: null, editId: null}); });

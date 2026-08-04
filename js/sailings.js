@@ -16,6 +16,14 @@ export function reserveCount(state, sailingId) {
   return state.customers.filter(c => c.sailingId === sailingId && c.reservationStatus === "reserve").length;
 }
 
+// Kansainvälinen henkilökuljetus (ALV 0 %): rasti TAI reitin/nimen tunnistus
+export function isIntlSailing(s) {
+  if (!s) return false;
+  if (s.kansainvalinen) return true;
+  const txt = String(s.reitti || "") + " " + String(s.name || "");
+  return /viro|tallinn|ruots|saksa|gotlan|ulkom|englanti|london|dover|britt|prangli|naissaar|eesti|aegna|helsinki\s*[-–]\s*tallinn/i.test(txt);
+}
+
 export function emptySailingDraft(date) {
   return {
     name: "", reitti: "", kansainvalinen: false,
