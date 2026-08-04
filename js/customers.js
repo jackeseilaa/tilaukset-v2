@@ -14,6 +14,10 @@ export function custEventLabel(state, c) {
     const s = state.sailings.find(x => x.id === c.sailingId);
     return s ? (s.name || "Purjehdus") : "(poistettu purjehdus)";
   }
+  if (c.tutkintoId) {
+    const t = state.tutkinnot.find(x => x.id === c.tutkintoId);
+    return t ? (t.type || "Tutkinto") + (t.boatType ? " (" + t.boatType + ")" : "") : "(poistettu tutkinto)";
+  }
   return "—";
 }
 
@@ -21,6 +25,10 @@ export function custEventDate(state, c) {
   if (c.sailingId) {
     const s = state.sailings.find(x => x.id === c.sailingId);
     return s ? (s.date || "") : "";
+  }
+  if (c.tutkintoId) {
+    const t = state.tutkinnot.find(x => x.id === c.tutkintoId);
+    return t ? (t.date || "") : "";
   }
   return "";
 }
@@ -33,13 +41,13 @@ export function statusBadge(s) {
 }
 
 export function emptyCustomerDraft(sailingId) {
-  return {name: "", phone: "", email: "", sailingId: sailingId || "", billTo: "self", companyId: "", reservationStatus: "pending", laskutusosio: "", priceOverride: ""};
+  return {name: "", phone: "", email: "", sailingId: sailingId || "", tutkintoId: "", billTo: "self", companyId: "", reservationStatus: "pending", laskutusosio: "", priceOverride: ""};
 }
 
 function draftFromCustomer(c) {
   return {
     name: c.name || "", phone: c.phone || "", email: c.email || "",
-    sailingId: c.sailingId || "", billTo: c.billTo || "self", companyId: c.companyId || "",
+    sailingId: c.sailingId || "", tutkintoId: c.tutkintoId || "", billTo: c.billTo || "self", companyId: c.companyId || "",
     reservationStatus: c.reservationStatus || "pending", laskutusosio: c.laskutusosio || "",
     priceOverride: c.priceOverride != null ? String(c.priceOverride) : ""
   };
@@ -64,9 +72,12 @@ registerAction("save-customer", async ({store}) => {
   if (billTo === "company" && !d.companyId) { alert("Valitse tilaajayritys."); return; }
   const priceOverrideRaw = d.priceOverride ?? "";
   const priceOverride = priceOverrideRaw !== "" ? parseFloat(priceOverrideRaw) : null;
+  // Purjehdus ja tutkinto ovat toisensa poissulkevia — jos molemmat valittu, purjehdus voittaa.
+  const sailingId = d.sailingId || "";
+  const tutkintoId = sailingId ? "" : (d.tutkintoId || "");
   const data = {
     name, phone: (d.phone || "").trim(), email: (d.email || "").trim(),
-    sailingId: d.sailingId || "", billTo,
+    sailingId, tutkintoId, billTo,
     companyId: billTo === "company" ? d.companyId : "",
     reservationStatus: d.reservationStatus || "pending",
     laskutusosio: (d.laskutusosio || "").trim(),

@@ -16,6 +16,9 @@ import "./sailings.js";
 import "./calendar.js";
 import "./customers.js";
 import "./invoices.js";
+import "./tutkinnot.js";
+import "./admin.js";
+import "./backup.js";
 
 const store = createStore(initialState);
 const appEl = document.getElementById("app");

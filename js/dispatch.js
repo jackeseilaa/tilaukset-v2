@@ -55,6 +55,18 @@ export function initDispatch(rootEl, store) {
   };
   rootEl.addEventListener("input", bindHandler);
   rootEl.addEventListener("change", bindHandler);
+
+  // Tiedostovalinnat (esim. JSON-palautus) käyttävät data-file-action-attribuuttia
+  // eivätkä data-actionia, koska data-action laukeaisi jo tiedostovalitsimen
+  // AVAAVASTA klikkauksesta ennen kuin tiedosto on edes valittu.
+  rootEl.addEventListener("change", async (e) => {
+    const el = e.target.closest("[data-file-action]");
+    if (!el || el.type !== "file") return;
+    const handler = actions.get(el.dataset.fileAction);
+    if (!handler || !el.files || !el.files[0]) return;
+    await handler({el, file: el.files[0], store});
+    el.value = "";
+  });
 }
 
 function setPath(obj, path, value) {

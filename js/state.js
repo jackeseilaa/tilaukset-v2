@@ -48,7 +48,14 @@ export const initialState = {
   editInvoiceId: null,
   invoiceDraft: {issuer: "tmi", sailingId: "", mode: "customer", type: "full", invoiceDate: today(), customerId: "", companyId: "", partialAmount: "", creditRefId: "", note: ""},
   registerMonth: today().slice(0, 7),
-  registerIssuerFilter: "all"
+  registerIssuerFilter: "all",
+
+  // Tutkinnot (modal==="tutkinto")
+  tutkintoDraft: null,
+  searchTutkinnot: "",
+
+  // Admin (lue-vain diagnostiikka)
+  adminOrphanIds: []
 };
 
 export const ISSUERS = {
@@ -68,6 +75,8 @@ export const SAILING_GROUPS = [
   {id: "other", label: "Muut", types: ["Yritystilaisuus", "Muu"]}
 ];
 
+export const TUTKINTO_TYPES = ["Rannikkopäällikkö", "Saaristopäällikkö", "ICC näyttökoe", "Vuokraveneenkuljettaja näyttökoe", "Muu"];
+
 export const NAV_TABS = [
   ["dashboard", "🧭 Dashboard"],
   ["calendar", "📅 Kalenteri"],
@@ -75,8 +84,10 @@ export const NAV_TABS = [
   ["muuttuotteet", "📦 Muut tuotteet"],
   ["customers", "👤 Asiakkaat"],
   ["companies", "🏢 Yritykset"],
+  ["tutkinnot", "🎓 Tutkinnot"],
   ["invoicing", "🧾 Laskutus"],
   ["reskontra", "📊 Reskontra"],
   ["tasmaytys", "🔍 Täsmäytys"],
-  ["kyselyt", "📋 Kyselyt"]
+  ["kyselyt", "📋 Kyselyt"],
+  ["admin", "🛠️ Admin"]
 ];

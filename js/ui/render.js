@@ -16,8 +16,11 @@ import {renderMuutTuotteetView} from "./muuttuotteet-view.js";
 import {renderReskontraView} from "./reskontra-view.js";
 import {renderTasmaytysView} from "./tasmaytys-view.js";
 import {renderKyselytView} from "./kyselyt-view.js";
+import {renderTutkinnotView} from "./tutkinnot-view.js";
+import {renderTutkintoModal} from "./tutkinto-modal.js";
+import {renderAdminView} from "./admin-view.js";
 
-export const APP_VERSION = "V1.4.0";
+export const APP_VERSION = "V1.5.0";
 
 registerAction("set-tab", ({el, store}) => { store.setState({tab: el.dataset.tab}); });
 registerAction("close-modal", ({store}) => { store.setState({modal: null, editId: null}); });
@@ -57,7 +60,9 @@ const VIEW_RENDERERS = {
   invoicing: renderInvoicingView,
   reskontra: renderReskontraView,
   tasmaytys: renderTasmaytysView,
-  kyselyt: renderKyselytView
+  kyselyt: renderKyselytView,
+  tutkinnot: renderTutkinnotView,
+  admin: renderAdminView
 };
 
 function renderTab(state) {
@@ -70,7 +75,7 @@ function renderModal(state) {
   if (state.modal === "sailing") return renderSailingModal(state);
   if (state.modal === "block-day") return renderBlockDayModal(state);
   if (state.modal === "customer") return renderCustomerModal(state);
-  // Muut modaalit (lasku, tutkinto, jne.) täytetään myöhemmässä vaiheessa.
+  if (state.modal === "tutkinto") return renderTutkintoModal(state);
   return "";
 }
 

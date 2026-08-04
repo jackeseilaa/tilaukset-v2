@@ -22,6 +22,12 @@ export function renderCustomerModal(state) {
           </select>
         </div>
       </div>
+      <div class="field"><label class="lbl">Tutkinto <span style="font-weight:400;text-transform:none;font-size:11px;color:#6b7280">(jos ei purjehdusta — täytä vain toinen)</span></label>
+        <select data-bind="customerDraft.tutkintoId">
+          <option value="">-- Ei valittu --</option>
+          ${state.tutkinnot.slice().sort((a, b) => (b.date || "").localeCompare(a.date || "")).map(t => `<option value="${t.id}" ${t.id === d.tutkintoId ? "selected" : ""}>${esc(t.type)}${t.boatType ? " (" + esc(t.boatType) + ")" : ""} — ${fmtDate(t.date)}</option>`).join("")}
+        </select>
+      </div>
       <div class="grid2">
         <div class="field"><label class="lbl">Varausmaksustatus</label>
           <select data-bind="customerDraft.reservationStatus">
