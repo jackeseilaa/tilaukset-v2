@@ -23,6 +23,16 @@ function readCtx(el) {
 
 export function initDispatch(rootEl, store) {
   rootEl.addEventListener("click", async (e) => {
+    // Modaalin taustan (overlay) klikkaus sulkee modaalin — mutta vain kun
+    // klikkaus osuu täsmälleen taustaan itseensä, ei sen sisällä olevaan
+    // modaali-laatikkoon. closest("[data-action]") ei kelpaa tähän, koska se
+    // löytäisi overlay-elementin myös silloin kun klikataan mitä tahansa
+    // modaalin sisällä olevaa kohtaa jolla ei ole omaa data-actionia (esim.
+    // otsikkoteksti) — overlay on rakenteellisesti kaikkien niiden esi-isä.
+    if (e.target.classList.contains("overlay")) {
+      store.setState({modal: null, editId: null});
+      return;
+    }
     const el = e.target.closest("[data-action]");
     if (!el || el.tagName === "LABEL") return;
     const handler = actions.get(el.dataset.action);

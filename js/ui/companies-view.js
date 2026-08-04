@@ -28,7 +28,7 @@ export function renderCompaniesView(state) {
 export function renderCompanyModal(state) {
   const editing = !!state.editId;
   const d = state.companyDraft || {};
-  return `<div class="overlay" data-action="close-modal"><div class="modal" style="max-width:520px" onclick="event.stopPropagation()">
+  return `<div class="overlay"><div class="modal" style="max-width:520px">
     <div class="modal-head"><div class="row-between"><div class="modal-title">${editing ? "Muokkaa yritystä" : "Uusi yritys"}</div><button class="btn btn-secondary btn-sm" data-action="close-modal">✕</button></div></div>
     <div class="modal-body">
       <div class="field"><label class="lbl">Yrityksen nimi *</label><input data-bind="companyDraft.name" value="${esc(d.name || "")}"></div>
