@@ -47,11 +47,17 @@ export function initDispatch(rootEl, store) {
   // suodattavat listaa elävästi) — render.js palauttaa fokuksen ja
   // kursorin kohdan data-bind-attribuutin perusteella, joten kirjoitettu
   // teksti ei katoa vaikka renderöinti ajetaan jokaisella näppäimellä.
-  const bindHandler = (e) => {
+  const bindHandler = async (e) => {
     const el = e.target.closest("[data-bind]");
     if (!el) return;
     setPath(store.getState(), el.dataset.bind, el.type === "checkbox" ? el.checked : el.value);
     store.touch();
+    // data-change-action: kenttäkohtainen sivuvaikutus data-bindin päälle
+    // (esim. Tyyppi-valikon erikoisarvo joka vaihtaa auki olevan modaalin).
+    if (el.dataset.changeAction) {
+      const handler = actions.get(el.dataset.changeAction);
+      if (handler) await handler({...readCtx(el), e, store});
+    }
   };
   rootEl.addEventListener("input", bindHandler);
   rootEl.addEventListener("change", bindHandler);

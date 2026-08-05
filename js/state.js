@@ -65,6 +65,11 @@ export const ISSUERS = {
 
 export const SAILING_TYPES = ["Iltapurjehdus", "Päiväpurjehdus", "Charter", "Kurssi", "Yritystilaisuus", "Purjehdusretki", "Muu"];
 
+// Ei oikea purjehdustyyppi — valinta Tyyppi-valikossa joka ohjaa uuden
+// purjehduksen lomakkeen sijaan Tutkinto-modaaliin (ks. sailings.js:
+// "sailing-type-picked"). Tätä arvoa ei koskaan tallenneta Firestoreen.
+export const SAILING_TUTKINTO_OPTION = "__tutkinto__";
+
 export const SAILING_GROUPS = [
   {id: "all", label: "Kaikki", types: null},
   {id: "courses", label: "Kurssit", types: ["Kurssi"]},

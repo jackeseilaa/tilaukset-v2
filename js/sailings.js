@@ -1,7 +1,8 @@
 import {registerAction} from "./dispatch.js";
 import {fsAdd, fsSet, fsDel} from "./db.js";
 import {today, addDays} from "./format.js";
-import {SAILING_TYPES} from "./state.js";
+import {SAILING_TYPES, SAILING_TUTKINTO_OPTION} from "./state.js";
+import {emptyTutkintoDraft} from "./tutkinnot.js";
 
 export function enrolledCount(state, sailingId) {
   return state.customers.filter(c => c.sailingId === sailingId).length;
@@ -97,6 +98,20 @@ registerAction("copy-sailing", ({id, store}) => {
   store.setState({
     modal: "sailing", editId: null,
     sailingDraft: {...draftFromSailing(s), name: s.name + " (kopio)", date: today(), endDate: ""}
+  });
+});
+
+// Tyyppi-valikon "Tutkinto"-erikoisvalinta: purjehduslomake ei koskaan
+// tallenna tätä arvoa (ks. save-sailing), vaan vaihtaa suoraan auki olevan
+// modaalin Tutkinto-modaaliksi samalla päivämäärällä. Tutkinnot pysyvät
+// näin täysin omana kokonaisuutenaan (oma kokoelma, oma välilehti).
+registerAction("sailing-type-picked", ({store}) => {
+  const state = store.getState();
+  const d = state.sailingDraft;
+  if (!d || d.type !== SAILING_TUTKINTO_OPTION) return;
+  store.setState({
+    modal: "tutkinto", editId: null, sailingDraft: null,
+    tutkintoDraft: {...emptyTutkintoDraft(), date: d.date || today()}
   });
 });
 

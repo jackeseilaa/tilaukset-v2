@@ -53,8 +53,8 @@ function draftFromCustomer(c) {
   };
 }
 
-registerAction("new-customer", ({store}) => {
-  store.setState({modal: "customer", editId: null, customerDraft: emptyCustomerDraft()});
+registerAction("new-customer", ({id, store}) => {
+  store.setState({modal: "customer", editId: null, customerDraft: emptyCustomerDraft(id || "")});
 });
 
 registerAction("edit-customer", ({id, store}) => {
