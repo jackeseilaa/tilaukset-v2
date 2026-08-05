@@ -40,8 +40,8 @@ export function statusBadge(s) {
   return "";
 }
 
-export function emptyCustomerDraft(sailingId) {
-  return {name: "", phone: "", email: "", sailingId: sailingId || "", tutkintoId: "", billTo: "self", companyId: "", reservationStatus: "pending", laskutusosio: "", priceOverride: ""};
+export function emptyCustomerDraft(sailingId, tutkintoId) {
+  return {name: "", phone: "", email: "", sailingId: sailingId || "", tutkintoId: tutkintoId || "", billTo: "self", companyId: "", reservationStatus: "pending", laskutusosio: "", priceOverride: ""};
 }
 
 function draftFromCustomer(c) {
@@ -53,8 +53,9 @@ function draftFromCustomer(c) {
   };
 }
 
-registerAction("new-customer", ({id, store}) => {
-  store.setState({modal: "customer", editId: null, customerDraft: emptyCustomerDraft(id || "")});
+registerAction("new-customer", ({id, type, store}) => {
+  const forTutkinto = type === "tutkinto";
+  store.setState({modal: "customer", editId: null, customerDraft: emptyCustomerDraft(forTutkinto ? "" : (id || ""), forTutkinto ? (id || "") : "")});
 });
 
 registerAction("edit-customer", ({id, store}) => {

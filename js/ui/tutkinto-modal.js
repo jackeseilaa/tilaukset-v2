@@ -1,5 +1,6 @@
 import {esc} from "../format.js";
 import {TUTKINTO_TYPES} from "../state.js";
+import {statusBadge} from "../customers.js";
 
 export function renderTutkintoModal(state) {
   const editing = !!state.editId;
@@ -30,6 +31,26 @@ export function renderTutkintoModal(state) {
       </div>
       <div class="field"><label class="lbl">Lisätiedot</label><textarea data-bind="tutkintoDraft.notes" rows="2" placeholder="Esim. ohjaaja, vaatimukset, huomiot…">${esc(d.notes || "")}</textarea></div>
       <div class="row" style="justify-content:flex-end;margin-top:16px"><button class="btn btn-primary" data-action="save-tutkinto">${editing ? "Tallenna muutokset" : "Tallenna"}</button></div>
+      ${editing ? renderTutkintoParticipants(state) : ""}
     </div>
   </div></div>`;
+}
+
+function renderTutkintoParticipants(state) {
+  const list = state.customers.filter(c => c.tutkintoId === state.editId)
+    .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+  const rows = list.map(c => {
+    const st = c.reservationStatus || "pending";
+    const contact = [c.phone, c.email].filter(Boolean).join(" · ");
+    return `<div class="item" style="padding:8px 10px;background:#f8fafc">
+      <div style="flex:1"><h3 style="font-size:14px">${esc(c.name || "")}</h3>
+      <div class="meta">${statusBadge(st)}${contact ? ` · ${esc(contact)}` : ""}</div></div>
+      <div class="row" style="flex-shrink:0;align-items:flex-start">${st !== "paid" ? `<button class="btn btn-teal btn-sm" data-action="confirm-payment" data-id="${c.id}">✓ Maksettu</button>` : ""}<button class="btn btn-secondary btn-sm" data-action="edit-customer" data-id="${c.id}">Muokkaa</button><button class="btn btn-danger btn-sm" data-action="delete-customer" data-id="${c.id}">Poista</button></div>
+    </div>`;
+  }).join("");
+  return `<div class="hr"></div>
+    <div class="row-between"><div class="lbl" style="margin:0">Osallistujat (${list.length})</div><button class="btn btn-secondary btn-sm" data-action="new-customer" data-id="${state.editId}" data-type="tutkinto">+ Lisää osallistuja</button></div>
+    <div style="display:flex;flex-direction:column;gap:6px;margin-top:8px">
+      ${list.length === 0 ? `<div class="infobox infobox-blue">Ei osallistujia vielä.</div>` : rows}
+    </div>`;
 }

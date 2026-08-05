@@ -3,6 +3,10 @@ import {fsAdd, fsSet, fsDel} from "./db.js";
 import {today} from "./format.js";
 import {TUTKINTO_TYPES} from "./state.js";
 
+export function tutkintoEnrolledCount(state, tutkintoId) {
+  return state.customers.filter(c => c.tutkintoId === tutkintoId).length;
+}
+
 export function emptyTutkintoDraft() {
   return {type: TUTKINTO_TYPES[0], date: today(), boatType: "Purjevene", maxPersons: 0, startTime: "", endTime: "", pricePerPerson: 0, location: "", notes: ""};
 }

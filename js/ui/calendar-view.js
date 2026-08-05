@@ -1,5 +1,6 @@
 import {esc, today, addDays} from "../format.js";
 import {enrolledCount} from "../sailings.js";
+import {tutkintoEnrolledCount} from "../tutkinnot.js";
 
 function buildEventMap(state) {
   const eventMap = {};
@@ -27,6 +28,12 @@ function buildEventMap(state) {
       addEv(s.date, {id: s.id, name: s.name, type: s.type, maxPersons: s.maxPersons, reitti: s.reitti || "", timeLabel: tl});
     }
   }
+  for (const t of state.tutkinnot) {
+    if (!t.date) continue;
+    let tl = ""; if (t.startTime && t.endTime) tl = t.startTime + "–" + t.endTime; else if (t.startTime) tl = "klo " + t.startTime;
+    const name = (t.type || "Tutkinto") + (t.boatType ? " (" + t.boatType + ")" : "");
+    addEv(t.date, {id: t.id, name, type: "Tutkinto", maxPersons: t.maxPersons, reitti: t.location || "", timeLabel: tl, _isTutkinto: true});
+  }
   for (const b of state.blockedDays) {
     if (!b.date) continue;
     let tl = ""; if (b.startTime && b.endTime) tl = b.startTime + "–" + b.endTime; else if (b.startTime) tl = "klo " + b.startTime;
@@ -35,7 +42,7 @@ function buildEventMap(state) {
   return eventMap;
 }
 
-const TYPES = ["Kurssi", "Charter", "Iltapurjehdus", "Päiväpurjehdus", "Purjehdusretki", "Yritystilaisuus", "Muu"];
+const TYPES = ["Kurssi", "Charter", "Iltapurjehdus", "Päiväpurjehdus", "Purjehdusretki", "Yritystilaisuus", "Muu", "Tutkinto"];
 
 function renderMonthGrid(state, eventMap) {
   const [year, month] = state.calendarMonth.split("-").map(Number);
@@ -60,8 +67,9 @@ function renderMonthGrid(state, eventMap) {
     const evHTML = evs.slice(0, 3).map(ev => {
       const tc = "type-" + ev.type + (ev._mdClass ? " " + ev._mdClass : "");
       const isBlocked = !!ev._isBlocked;
-      const action = isBlocked ? "edit-block-day" : "edit-sailing";
-      const booked = (isBlocked || ev._isMultiDay) ? "" : ` (${enrolledCount(state, ev.id)}/${ev.maxPersons || 0})`;
+      const action = isBlocked ? "edit-block-day" : (ev._isTutkinto ? "edit-tutkinto" : "edit-sailing");
+      const cnt = ev._isTutkinto ? tutkintoEnrolledCount(state, ev.id) : enrolledCount(state, ev.id);
+      const booked = (isBlocked || ev._isMultiDay) ? "" : ` (${cnt}${ev.maxPersons ? "/" + ev.maxPersons : ""})`;
       const tl = ev.timeLabel ? `<span style="display:block;opacity:.75;font-size:9px">${esc(ev.timeLabel)}</span>` : "";
       const rl = ev.reitti ? `<span style="display:block;opacity:.7;font-size:9px;overflow:hidden;text-overflow:ellipsis">📍${esc(ev.reitti)}</span>` : "";
       return `<button class="cal-event ${tc}" data-action="${action}" data-id="${ev.id}" style="padding:3px 5px">${esc(ev.name)}${booked}${tl}${rl}</button>`;
@@ -98,8 +106,8 @@ function renderDayView(state, eventMap) {
   const isToday = dateStr === today();
   const rows = evs.map(ev => {
     const isBlocked = !!ev._isBlocked;
-    const action = isBlocked ? "edit-block-day" : "edit-sailing";
-    const conf = isBlocked ? 0 : enrolledCount(state, ev.id);
+    const action = isBlocked ? "edit-block-day" : (ev._isTutkinto ? "edit-tutkinto" : "edit-sailing");
+    const conf = isBlocked ? 0 : (ev._isTutkinto ? tutkintoEnrolledCount(state, ev.id) : enrolledCount(state, ev.id));
     return `<div style="border:1.5px solid #e5e7eb;border-radius:10px;padding:12px 14px;margin-bottom:10px;background:#fff">
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
         <span class="cal-event type-${ev.type}" style="font-size:12px;padding:3px 8px;border-radius:6px;width:auto">${esc(ev.name || "")}</span>
