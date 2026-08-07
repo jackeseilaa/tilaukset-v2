@@ -26,6 +26,7 @@ function renderRegister(state) {
         <td class="r" style="font-weight:700;color:${Number(x.grossTotal || 0) < 0 ? "#991b1b" : "#0a4272"}">${Number(x.grossTotal || 0).toFixed(2)} €</td>
         <td>${x.paid ? `<button class="btn btn-teal btn-sm" data-action="toggle-paid" data-id="${x.id}">✓ Maksettu</button>` : `<button class="btn btn-secondary btn-sm" data-action="toggle-paid" data-id="${x.id}">● Avoin</button>`}</td>
         <td><div class="row" style="gap:4px">
+          <button class="btn btn-secondary btn-sm" data-action="download-invoice-pdf" data-id="${x.id}">📄 PDF</button>
           <button class="btn btn-secondary btn-sm" data-action="edit-invoice" data-id="${x.id}">Muokkaa</button>
           ${!x.isCredit ? `<button class="btn btn-secondary btn-sm" data-action="new-credit-note" data-id="${x.id}">↩ Hyvitä</button>` : ""}
           <button class="btn btn-danger btn-sm" data-action="delete-invoice" data-id="${x.id}">Poista</button>
@@ -72,7 +73,7 @@ export function renderInvoicingView(state) {
     <div class="card-title">🧾 Laskutus</div>
     <div class="card-sub">${editing ? `Muokkaat laskua <strong>${esc(state.invoices.find(x => x.id === state.editInvoiceId)?.invoiceNo || "")}</strong>` : "Luo lasku purjehdukselle tai tutkinnolle"}</div>
     ${editing ? `<div class="infobox infobox-amber" style="margin-bottom:12px">✎ Muokkaustila — laskunumero säilyy · <button class="btn btn-secondary btn-sm" data-action="cancel-edit-invoice" style="margin-left:8px">✕ Peruuta</button></div>` : ""}
-    <div class="infobox infobox-blue" style="margin-bottom:12px">🚧 PDF-tulostus ja sähköpostilähetys tulevat myöhemmin.</div>
+    <div class="infobox infobox-blue" style="margin-bottom:12px">🚧 Sähköpostilähetys tulee myöhemmin.</div>
     <div class="hr"></div>
     <div class="grid3" style="margin-bottom:14px">
       <div class="field"><label class="lbl">Laskuttaja</label><select data-bind="invoiceDraft.issuer"><option value="tmi" ${(d.issuer || "tmi") === "tmi" ? "selected" : ""}>J Sailing Tmi</option><option value="oy" ${d.issuer === "oy" ? "selected" : ""}>AJarmo Oy</option></select></div>

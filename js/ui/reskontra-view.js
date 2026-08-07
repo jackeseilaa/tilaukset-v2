@@ -48,6 +48,7 @@ export function renderReskontraView(state) {
           <td class="r" style="font-weight:700;color:${G(x) < 0 ? "#991b1b" : "#0a4272"}">${G(x).toFixed(2)} €</td>
           <td><div class="row" style="gap:4px">
             <button class="btn btn-teal btn-sm" data-action="toggle-paid" data-id="${x.id}">✓ Maksettu</button>
+            <button class="btn btn-secondary btn-sm" data-action="download-invoice-pdf" data-id="${x.id}">📄 PDF</button>
             <button class="btn btn-secondary btn-sm" data-action="edit-invoice" data-id="${x.id}">Muokkaa</button>
           </div></td>
         </tr>`;
