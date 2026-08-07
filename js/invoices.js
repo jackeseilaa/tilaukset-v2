@@ -121,10 +121,13 @@ function computeTutkintoBase(state, draft, {itype, isPartial, isReservation}) {
   const t = state.tutkinnot.find(x => x.id === draft.tutkintoId) || null;
   const ratePct = VAT_RATES.YLEINEN;
   let payerName = "", payerEmail = "", payerBusinessId = "", lines = [], grossTotal = 0;
-  const eventName = t ? (t.type || "") + (t.boatType ? ` (${t.boatType})` : "") : "";
-  if (!t) return {tutkinto: t, ratePct, payerName, payerEmail, payerBusinessId, lines, grossTotal, eventName};
+  const baseEventName = t ? (t.type || "") + (t.boatType ? ` (${t.boatType})` : "") : "";
+  if (!t) return {tutkinto: t, ratePct, payerName, payerEmail, payerBusinessId, lines, grossTotal, eventName: baseEventName};
 
   const c = state.customers.find(x => x.id === draft.customerId);
+  // Osallistujan yksilöllinen tutkintotyyppi (esim. sama tilaisuus, osa tekee
+  // ICC:n, osa Saaristopäällikön) korvaa tilaisuuden oletustyypin laskulla.
+  const eventName = c?.tutkintoTypeOverride || baseEventName;
   if (c) {
     let price = (isPartial || isReservation) ? (parseFloat(draft.partialAmount || 0) || 0) : ((c.priceOverride != null && c.priceOverride !== "") ? Number(c.priceOverride) : Number(t.pricePerPerson || 0));
     if (!price) price = parseFloat(draft.partialAmount || 0) || 0;

@@ -16,7 +16,8 @@ export function custEventLabel(state, c) {
   }
   if (c.tutkintoId) {
     const t = state.tutkinnot.find(x => x.id === c.tutkintoId);
-    return t ? (t.type || "Tutkinto") + (t.boatType ? " (" + t.boatType + ")" : "") : "(poistettu tutkinto)";
+    if (!t) return "(poistettu tutkinto)";
+    return c.tutkintoTypeOverride || (t.type || "Tutkinto") + (t.boatType ? " (" + t.boatType + ")" : "");
   }
   return "—";
 }
@@ -41,13 +42,14 @@ export function statusBadge(s) {
 }
 
 export function emptyCustomerDraft(sailingId, tutkintoId) {
-  return {name: "", phone: "", email: "", sailingId: sailingId || "", tutkintoId: tutkintoId || "", billTo: "self", companyId: "", reservationStatus: "pending", laskutusosio: "", priceOverride: ""};
+  return {name: "", phone: "", email: "", sailingId: sailingId || "", tutkintoId: tutkintoId || "", tutkintoTypeOverride: "", billTo: "self", companyId: "", reservationStatus: "pending", laskutusosio: "", priceOverride: ""};
 }
 
 function draftFromCustomer(c) {
   return {
     name: c.name || "", phone: c.phone || "", email: c.email || "",
-    sailingId: c.sailingId || "", tutkintoId: c.tutkintoId || "", billTo: c.billTo || "self", companyId: c.companyId || "",
+    sailingId: c.sailingId || "", tutkintoId: c.tutkintoId || "", tutkintoTypeOverride: c.tutkintoTypeOverride || "",
+    billTo: c.billTo || "self", companyId: c.companyId || "",
     reservationStatus: c.reservationStatus || "pending", laskutusosio: c.laskutusosio || "",
     priceOverride: c.priceOverride != null ? String(c.priceOverride) : ""
   };
@@ -78,8 +80,8 @@ registerAction("save-customer", async ({store}) => {
   const tutkintoId = sailingId ? "" : (d.tutkintoId || "");
   const data = {
     name, phone: (d.phone || "").trim(), email: (d.email || "").trim(),
-    sailingId, tutkintoId, billTo,
-    companyId: billTo === "company" ? d.companyId : "",
+    sailingId, tutkintoId, tutkintoTypeOverride: tutkintoId ? (d.tutkintoTypeOverride || "") : "",
+    billTo, companyId: billTo === "company" ? d.companyId : "",
     reservationStatus: d.reservationStatus || "pending",
     laskutusosio: (d.laskutusosio || "").trim(),
     priceOverride

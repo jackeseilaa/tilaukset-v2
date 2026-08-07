@@ -1,4 +1,5 @@
 import {esc, fmtDate} from "../format.js";
+import {TUTKINTO_TYPES} from "../state.js";
 
 export function renderCustomerModal(state) {
   const editing = !!state.editId;
@@ -28,6 +29,13 @@ export function renderCustomerModal(state) {
           ${state.tutkinnot.slice().sort((a, b) => (b.date || "").localeCompare(a.date || "")).map(t => `<option value="${t.id}" ${t.id === d.tutkintoId ? "selected" : ""}>${esc(t.type)}${t.boatType ? " (" + esc(t.boatType) + ")" : ""} — ${fmtDate(t.date)}</option>`).join("")}
         </select>
       </div>
+      ${d.tutkintoId ? `<div class="field" style="margin-top:12px">
+        <label class="lbl">Tutkintotyyppi (yksilöllinen) <span style="font-weight:400;text-transform:none;font-size:11px;color:#6b7280">— tyhjä = tilaisuuden tyyppi</span></label>
+        <select data-bind="customerDraft.tutkintoTypeOverride">
+          <option value="">-- Tilaisuuden tyyppi (oletus) --</option>
+          ${TUTKINTO_TYPES.map(t => `<option value="${esc(t)}" ${(d.tutkintoTypeOverride || "") === t ? "selected" : ""}>${esc(t)}</option>`).join("")}
+        </select>
+      </div>` : ""}
       <div class="grid2">
         <div class="field"><label class="lbl">Varausmaksustatus</label>
           <select data-bind="customerDraft.reservationStatus">

@@ -44,7 +44,7 @@ function renderTutkintoParticipants(state) {
     const contact = [c.phone, c.email].filter(Boolean).join(" · ");
     return `<div class="item" style="padding:8px 10px;background:#f8fafc">
       <div style="flex:1"><h3 style="font-size:14px">${esc(c.name || "")}</h3>
-      <div class="meta">${statusBadge(st)}${contact ? ` · ${esc(contact)}` : ""}</div></div>
+      <div class="meta">${statusBadge(st)}${c.tutkintoTypeOverride ? ` · <span class="badge badge-blue" style="font-size:10px">🎓 ${esc(c.tutkintoTypeOverride)}</span>` : ""}${contact ? ` · ${esc(contact)}` : ""}</div></div>
       <div class="row" style="flex-shrink:0;align-items:flex-start">${st !== "paid" ? `<button class="btn btn-teal btn-sm" data-action="confirm-payment" data-id="${c.id}">✓ Maksettu</button>` : ""}<button class="btn btn-secondary btn-sm" data-action="edit-customer" data-id="${c.id}">Muokkaa</button><button class="btn btn-danger btn-sm" data-action="delete-customer" data-id="${c.id}">Poista</button></div>
     </div>`;
   }).join("");
