@@ -35,34 +35,54 @@ function renderRegister(state) {
   </div>`;
 }
 
+function renderTuotePicker(state, d) {
+  const products = state.muutTuotteet.slice().sort((a, b) => (a.nimi || "").localeCompare(b.nimi || ""));
+  if (products.length === 0) return "";
+  const tuoteLines = d.tuoteLines || {};
+  return `<div class="field" style="margin-top:10px">
+    <label class="lbl">Lisätuoterivit</label>
+    <table class="table"><thead><tr><th>Tuote</th><th class="r">€/kpl</th><th class="r" style="width:80px">Kpl</th></tr></thead>
+    <tbody>${products.map(p => `<tr>
+      <td>${esc(p.nimi)}${p.ryhma ? ` <span class="small muted">(${esc(p.ryhma)})</span>` : ""} <span class="small muted">ALV ${esc(String(p.alv || "25.5"))}%</span></td>
+      <td class="r">${Number(p.hinta || 0).toFixed(2)} €</td>
+      <td class="r"><input type="number" min="0" step="1" style="width:64px" data-bind="invoiceDraft.tuoteLines.${p.id}" value="${esc(String(tuoteLines[p.id] ?? ""))}" placeholder="0"></td>
+    </tr>`).join("")}</tbody></table>
+  </div>`;
+}
+
 export function renderInvoicingView(state) {
   const d = state.invoiceDraft || {};
   const editing = !!state.editInvoiceId;
+  const source = d.source || "sailing";
   const itype = d.type || "full";
   const isCredit = itype === "credit", isPartial = itype === "partial", isReservation = itype === "reservation";
-  const selS = state.sailings.find(x => x.id === d.sailingId);
+  const selS = source === "sailing" ? state.sailings.find(x => x.id === d.sailingId) : null;
   const hasFee = selS && Number(selS.reservationFee || 0) > 0;
   const inv = computeInvoice(state, d);
   const issuerInfo = ISSUERS[d.issuer || "tmi"] || ISSUERS.tmi;
   const invTitle = isCredit ? "HYVITYSLASKU" : itype === "reservation" ? "LASKU — VARAUSMAKSU" : itype === "partial" ? "LASKU — OSASUORITUS" : "LASKU — LOPPULASKU";
 
   const sailOpts = state.sailings.slice().sort((a, b) => (a.date || "").localeCompare(b.date || "")).map(s => `<option value="${s.id}" ${s.id === d.sailingId ? "selected" : ""}>${esc(s.name)} (${fmtDate(s.date)})</option>`).join("");
+  const tutkintoOpts = state.tutkinnot.slice().sort((a, b) => (b.date || "").localeCompare(a.date || "")).map(t => `<option value="${t.id}" ${t.id === d.tutkintoId ? "selected" : ""}>${esc(t.type)}${t.boatType ? ` (${esc(t.boatType)})` : ""} — ${fmtDate(t.date)}</option>`).join("");
   const custOpts = state.customers.slice().sort((a, b) => (a.name || "").localeCompare(b.name || "")).map(c => `<option value="${c.id}" ${c.id === d.customerId ? "selected" : ""}>${esc(c.name)}</option>`).join("");
   const coOpts = state.companies.slice().sort((a, b) => (a.name || "").localeCompare(b.name || "")).map(co => `<option value="${co.id}" ${co.id === d.companyId ? "selected" : ""}>${esc(co.name)}</option>`).join("");
   const creditRefOpts = state.invoices.filter(x => !x.isCredit).sort((a, b) => (a.invoiceDate || "").localeCompare(b.invoiceDate || "")).map(x => `<option value="${x.id}" ${x.id === d.creditRefId ? "selected" : ""}>${esc(x.invoiceNo)} — ${esc(x.payerName)} — ${Number(x.grossTotal || 0).toFixed(2)} €</option>`).join("");
 
   return `<div class="card noPrint">
     <div class="card-title">🧾 Laskutus</div>
-    <div class="card-sub">${editing ? `Muokkaat laskua <strong>${esc(state.invoices.find(x => x.id === state.editInvoiceId)?.invoiceNo || "")}</strong>` : "Luo lasku purjehdukselle"}</div>
+    <div class="card-sub">${editing ? `Muokkaat laskua <strong>${esc(state.invoices.find(x => x.id === state.editInvoiceId)?.invoiceNo || "")}</strong>` : "Luo lasku purjehdukselle tai tutkinnolle"}</div>
     ${editing ? `<div class="infobox infobox-amber" style="margin-bottom:12px">✎ Muokkaustila — laskunumero säilyy · <button class="btn btn-secondary btn-sm" data-action="cancel-edit-invoice" style="margin-left:8px">✕ Peruuta</button></div>` : ""}
-    <div class="infobox infobox-blue" style="margin-bottom:12px">🚧 Vain purjehduspohjaiset laskut toistaiseksi. Tutkinto- ja tuotepohjaiset laskut, PDF-tulostus ja sähköpostilähetys tulevat myöhemmin.</div>
+    <div class="infobox infobox-blue" style="margin-bottom:12px">🚧 PDF-tulostus ja sähköpostilähetys tulevat myöhemmin.</div>
     <div class="hr"></div>
     <div class="grid3" style="margin-bottom:14px">
       <div class="field"><label class="lbl">Laskuttaja</label><select data-bind="invoiceDraft.issuer"><option value="tmi" ${(d.issuer || "tmi") === "tmi" ? "selected" : ""}>J Sailing Tmi</option><option value="oy" ${d.issuer === "oy" ? "selected" : ""}>AJarmo Oy</option></select></div>
-      <div class="field"><label class="lbl">Malli</label><select data-bind="invoiceDraft.mode"><option value="customer" ${d.mode === "customer" ? "selected" : ""}>Asiakaskohtainen</option><option value="customer-company" ${d.mode === "customer-company" ? "selected" : ""}>Asiakaskohtainen — yritys maksaa</option><option value="company" ${d.mode === "company" ? "selected" : ""}>Yrityslasku</option></select></div>
+      <div class="field"><label class="lbl">Laskutettava</label><select data-bind="invoiceDraft.source" data-change-action="invoice-source-changed" ${isCredit ? "disabled" : ""}><option value="sailing" ${source === "sailing" ? "selected" : ""}>⛵ Purjehdus / Kurssi</option><option value="tutkinto" ${source === "tutkinto" ? "selected" : ""}>🎓 Tutkinto</option></select></div>
       <div class="field"><label class="lbl">Laskulaji</label><select data-bind="invoiceDraft.type"><option value="full" ${itype === "full" ? "selected" : ""}>Loppulasku</option><option value="reservation" ${itype === "reservation" ? "selected" : ""}>Varausmaksu</option><option value="partial" ${itype === "partial" ? "selected" : ""}>Osasuoritus</option><option value="credit" ${itype === "credit" ? "selected" : ""}>Hyvityslasku</option></select></div>
     </div>
-    ${!isCredit ? `<div class="field"><label class="lbl">Tapahtuma *</label><select data-bind="invoiceDraft.sailingId"><option value="">-- valitse --</option>${sailOpts}</select></div>` : ""}
+    ${source === "sailing" ? `<div class="field"><label class="lbl">Malli</label><select data-bind="invoiceDraft.mode"><option value="customer" ${d.mode === "customer" ? "selected" : ""}>Asiakaskohtainen</option><option value="customer-company" ${d.mode === "customer-company" ? "selected" : ""}>Asiakaskohtainen — yritys maksaa</option><option value="company" ${d.mode === "company" ? "selected" : ""}>Yrityslasku</option></select></div>` : ""}
+    ${!isCredit ? (source === "tutkinto"
+      ? `<div class="field" style="margin-top:10px"><label class="lbl">Tutkinto *</label><select data-bind="invoiceDraft.tutkintoId"><option value="">-- valitse --</option>${tutkintoOpts}</select></div>`
+      : `<div class="field" style="margin-top:10px"><label class="lbl">Tapahtuma *</label><select data-bind="invoiceDraft.sailingId"><option value="">-- valitse --</option>${sailOpts}</select></div>`) : ""}
     <div class="grid2" style="margin-top:10px">
       <div class="field"><label class="lbl">Päivä</label><input type="date" data-bind="invoiceDraft.invoiceDate" value="${esc(d.invoiceDate || "")}"></div>
       ${(isPartial || (isReservation && !hasFee)) ? `<div class="field"><label class="lbl">${isReservation ? "Varausmaksun summa (€ brutto)" : "Osasuorituksen summa (€ brutto)"}</label><input type="number" min="0" step="0.01" data-bind="invoiceDraft.partialAmount" value="${esc(String(d.partialAmount || ""))}" placeholder="esim. 150.00"></div>` : ""}
@@ -71,9 +91,10 @@ export function renderInvoicingView(state) {
     <div class="field" style="margin-top:10px"><label class="lbl">Huomautus laskulle</label><textarea data-bind="invoiceDraft.note" rows="2" placeholder="esim. Meriprojekti">${esc(d.note || "")}</textarea></div>
     <div class="row" style="margin:14px 0;flex-wrap:wrap;gap:10px">
       <div style="flex:1;min-width:200px" class="field"><label class="lbl">Asiakas</label><select data-bind="invoiceDraft.customerId"><option value="">-- valitse --</option>${custOpts}</select></div>
-      ${(d.mode === "company" || d.mode === "customer-company") ? `<div style="flex:1;min-width:200px" class="field"><label class="lbl">Yritys</label><select data-bind="invoiceDraft.companyId"><option value="">-- valitse --</option>${coOpts}</select></div>` : ""}
+      ${(source === "sailing" && (d.mode === "company" || d.mode === "customer-company")) ? `<div style="flex:1;min-width:200px" class="field"><label class="lbl">Yritys</label><select data-bind="invoiceDraft.companyId"><option value="">-- valitse --</option>${coOpts}</select></div>` : ""}
       <div style="min-width:160px" class="field"><label class="lbl">Laskunro (seuraava)</label><div style="padding:10px 13px;border:1.5px solid #d1d5db;border-radius:8px;background:#f0f4f8;font-weight:800;color:#0a4272;font-size:15px">${esc(inv.invNoPreview)}</div><div class="small muted" style="margin-top:4px">Viite: ${esc(inv.reference)}</div></div>
     </div>
+    ${!isCredit ? renderTuotePicker(state, d) : ""}
   </div>
   <div class="card"><div class="invoice-box">
     <div class="row-between">
@@ -90,7 +111,9 @@ export function renderInvoicingView(state) {
     <div class="hr"></div>
     <table class="table" style="max-width:280px;margin-left:auto">
       <tr><td>Netto</td><td class="r">${Number(inv.net || 0).toFixed(2)} €</td></tr>
-      <tr><td>ALV ${inv.ratePct}%</td><td class="r">${Number(inv.vat || 0).toFixed(2)} €</td></tr>
+      ${inv.vatBreakdown.length > 1
+        ? inv.vatBreakdown.map(b => `<tr><td>ALV ${b.ratePct}%</td><td class="r">${Number(b.vat || 0).toFixed(2)} €</td></tr>`).join("")
+        : `<tr><td>ALV ${inv.vatBreakdown[0]?.ratePct ?? inv.ratePct}%</td><td class="r">${Number(inv.vat || 0).toFixed(2)} €</td></tr>`}
       <tr><td><strong>Yhteensä</strong></td><td class="r"><strong style="color:${isCredit ? "#991b1b" : "#0a4272"};font-size:18px">${Number(inv.grossTotal || 0).toFixed(2)} €</strong></td></tr>
     </table>
     <div class="hr noPrint"></div>
