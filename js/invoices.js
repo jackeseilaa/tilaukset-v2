@@ -18,15 +18,18 @@ export function finnishReference(digits) {
   return digits + String((10 - (sum % 10)) % 10);
 }
 
-// Nopea, ei-autoritatiivinen esikatselunumero lomakkeen live-esikatseluun
-// (skannaa paikallisen state.invoices-taulukon — sama tapa kuin vanhassa
-// sovelluksessa). Todellinen numero haetaan vasta tallennushetkellä
-// allocateInvoiceNumber()-funktiolla, joka käyttää Firestore-transaktiota
-// estämään kahden lähes samanaikaisen laskun päätymisen samaan numeroon
-// (riski jota vanhassa sovelluksessa ei ollut suojattu).
+// Ei-autoritatiivinen esikatselunumero lomakkeen live-esikatseluun. Ottaa
+// suuremman Firestoren reaaliaikaisesti synkatusta meta/invoiceCounter-laskurista
+// (autoritatiivinen, ks. allocateInvoiceNumber) ja paikallisesta state.invoices-
+// skannauksesta — pelkkä laskuri riittäisi normaalisti, mutta skannaus on
+// varasuoja jos laskuri-dokumentti ei ole vielä ehtinyt latautua. Aiemmin
+// käytettiin vain skannausta, mikä näytti vanhentunutta numeroa laskun poiston
+// jälkeen (laskuri oli jo edennyt, mutta poistettu laskunumero ei enää näkynyt
+// skannauksessa) — todellinen tallennettava numero oli aina oikein silti, vain
+// esikatselu saattoi harhauttaa hetken.
 export function previewNextInvoiceNumber(state) {
   const year = new Date().getFullYear();
-  let max = 0;
+  let max = Number(state.invoiceCounter?.[String(year)] || 0);
   for (const inv of state.invoices) {
     const m = String(inv.invoiceNo || "").match(/^JS-(\d{4})-(\d+)$/);
     if (m && Number(m[1]) === year) max = Math.max(max, Number(m[2]));

@@ -12,10 +12,16 @@ export function startListeners(store) {
     });
     unsubscribers.push(unsub);
   }
-  // meta/app: mm. viimeisin Drive-varmuuskopiointiaika ja laskunumerolaskuri,
-  // näkyy reaaliaikaisesti kaikilla laitteilla.
+  // meta/app: mm. viimeisin Drive-varmuuskopiointiaika, näkyy reaaliaikaisesti
+  // kaikilla laitteilla.
   unsubscribers.push(onSnapshot(doc(db, "meta", "app"), snap => {
     store.setState({meta: snap.exists() ? snap.data() : {}});
+  }));
+  // meta/invoiceCounter: allocateInvoiceNumber()in Firestore-transaktion päivittämä
+  // autoritatiivinen laskuri vuosittain — pidetään reaaliaikaisesti tilassa jotta
+  // previewNextInvoiceNumber() ei jää jälkeen laskun poiston jälkeen (ks. muistio).
+  unsubscribers.push(onSnapshot(doc(db, "meta", "invoiceCounter"), snap => {
+    store.setState({invoiceCounter: snap.exists() ? snap.data() : {}});
   }));
 }
 

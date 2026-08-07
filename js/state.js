@@ -10,6 +10,7 @@ export const initialState = {
   modal: null,
   editId: null,
   meta: {},
+  invoiceCounter: {},
   sailings: [], customers: [], companies: [], invoices: [],
   tutkinnot: [], muutTuotteet: [], kyselyt: [], blockedDays: [],
 
