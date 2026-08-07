@@ -4,7 +4,7 @@
 // olla oma tälle projektille (jsailing-tilaukset-v2), koska OAuth-clientit on
 // sidottu tiettyyn Google Cloud -projektiin eikä vanhan sovelluksen clientiä
 // voi käyttää uudelleen.
-export const DRIVE_OAUTH_CLIENT_ID = "KORVAA_GOOGLE_OAUTH_CLIENT_ID";
+export const DRIVE_OAUTH_CLIENT_ID = "338087731935-rh7g04c8idm1i3j1r5v57tjb3jqm80gf.apps.googleusercontent.com";
 
 // Luotu valmiiksi: "Tilaukset v2 varmuuskopiot" -kansio Drivessa.
 export const DRIVE_BACKUP_FOLDER_ID = "1WqMoBd27hoXnY5ERFT82uesXG7QRke68";
