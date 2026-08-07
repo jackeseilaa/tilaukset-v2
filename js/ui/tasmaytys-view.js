@@ -7,6 +7,11 @@ function custExpectedPrice(state, c) {
   return 0;
 }
 
+function findOrphanInvoices(state) {
+  const custIds = new Set(state.customers.map(c => c.id));
+  return state.invoices.filter(x => Array.isArray(x.coveredCustomerIds) && x.coveredCustomerIds.length && x.coveredCustomerIds.some(id => !custIds.has(id)));
+}
+
 function isInvoiced(state, c) {
   const eid = c.sailingId || "";
   const direct = state.invoices.some(x =>
@@ -28,6 +33,7 @@ export function renderTasmaytysView(state) {
   const maksettu = invs.filter(x => x.paid).reduce((s, x) => s + Number(x.grossTotal || 0), 0);
   const avoin = invs.filter(x => !x.paid).reduce((s, x) => s + Number(x.grossTotal || 0), 0);
   const uncovered = cs.filter(c => c.sailingId && !isInvoiced(state, c));
+  const orphanInvoices = findOrphanInvoices(state);
 
   return `<div class="card">
     <div class="card-title">🔍 Laskutuksen täsmäytys</div>
@@ -53,6 +59,24 @@ export function renderTasmaytysView(state) {
         <td class="small muted">${fmtDate(custEventDate(state, c))}</td>
         <td class="r">${custExpectedPrice(state, c).toFixed(0)} €</td>
         <td><button class="btn btn-secondary btn-sm" data-action="edit-customer" data-id="${c.id}">Näytä</button></td>
+      </tr>`).join("")}</tbody>
+    </table>`}
+  </div>
+  <div class="card">
+    <div class="card-title">🧾 Orpolaskut <span class="badge ${orphanInvoices.length ? "badge-red" : "badge-green"}" style="font-size:11px">${orphanInvoices.length}</span></div>
+    <div class="card-sub">Lasku viittaa poistettuun asiakastietueeseen (coveredCustomerIds).</div>
+    <div class="hr"></div>
+    ${orphanInvoices.length === 0 ? `<div class="infobox infobox-green">Ei orpolaskuja. ✅</div>` : `
+    <table class="table"><thead><tr><th>Nro</th><th>Pvm</th><th>Maksaja</th><th class="r">Summa</th><th></th></tr></thead>
+      <tbody>${orphanInvoices.map(x => `<tr>
+        <td style="font-weight:700;color:#0a4272">${esc(x.invoiceNo || "")}</td>
+        <td class="small">${esc(x.invoiceDate || "")}</td>
+        <td class="small">${esc(x.payerName || "")}</td>
+        <td class="r">${Number(x.grossTotal || 0).toFixed(2)} €</td>
+        <td><div class="row" style="gap:4px">
+          <button class="btn btn-secondary btn-sm" data-action="download-invoice-pdf" data-id="${x.id}">📄 PDF</button>
+          <button class="btn btn-secondary btn-sm" data-action="edit-invoice" data-id="${x.id}">Muokkaa</button>
+        </div></td>
       </tr>`).join("")}</tbody>
     </table>`}
   </div>`;
