@@ -73,7 +73,6 @@ export function renderInvoicingView(state) {
     <div class="card-title">🧾 Laskutus</div>
     <div class="card-sub">${editing ? `Muokkaat laskua <strong>${esc(state.invoices.find(x => x.id === state.editInvoiceId)?.invoiceNo || "")}</strong>` : "Luo lasku purjehdukselle tai tutkinnolle"}</div>
     ${editing ? `<div class="infobox infobox-amber" style="margin-bottom:12px">✎ Muokkaustila — laskunumero säilyy · <button class="btn btn-secondary btn-sm" data-action="cancel-edit-invoice" style="margin-left:8px">✕ Peruuta</button></div>` : ""}
-    <div class="infobox infobox-blue" style="margin-bottom:12px">🚧 Sähköpostilähetys tulee myöhemmin.</div>
     <div class="hr"></div>
     <div class="grid3" style="margin-bottom:14px">
       <div class="field"><label class="lbl">Laskuttaja</label><select data-bind="invoiceDraft.issuer"><option value="tmi" ${(d.issuer || "tmi") === "tmi" ? "selected" : ""}>J Sailing Tmi</option><option value="oy" ${d.issuer === "oy" ? "selected" : ""}>AJarmo Oy</option></select></div>
