@@ -124,8 +124,11 @@ function buildInvoiceSheetHtml(inv) {
   return {html, barcodeValue};
 }
 
-export async function downloadInvoicePdf(inv) {
-  if (!window.html2canvas || !window.jspdf) { alert("PDF-kirjastot eivät latautuneet. Tarkista internetyhteys ja lataa sivu uudelleen."); return; }
+// Yhteinen runko download- ja emaililiite-käyttötapauksille — rakentaa ja
+// palauttaa jsPDF-dokumentin, kutsuja päättää mitä sillä tehdään (.save() /
+// .output()). Heittää jos kirjastot eivät ole latautuneet.
+async function generateInvoicePdfDoc(inv) {
+  if (!window.html2canvas || !window.jspdf) throw new Error("PDF-kirjastot eivät latautuneet. Tarkista internetyhteys ja lataa sivu uudelleen.");
   const {html, barcodeValue} = buildInvoiceSheetHtml(inv);
   const wrapper = document.createElement("div");
   wrapper.style.cssText = "position:fixed;left:-9999px;top:0;width:794px;background:#fff;z-index:-1";
@@ -157,10 +160,27 @@ export async function downloadInvoicePdf(inv) {
         y += ph;
       }
     }
-    pdf.save(`${(inv.invoiceNo || "lasku").replace(/[^\w.-]/g, "_")}.pdf`);
+    return pdf;
   } finally {
     document.body.removeChild(wrapper);
   }
+}
+
+export async function downloadInvoicePdf(inv) {
+  try {
+    const pdf = await generateInvoicePdfDoc(inv);
+    pdf.save(`${(inv.invoiceNo || "lasku").replace(/[^\w.-]/g, "_")}.pdf`);
+  } catch (err) {
+    alert(err.message || "PDF:n luonti epäonnistui.");
+  }
+}
+
+// Sähköpostiliitteeksi — ei omaa virheenkäsittelyä, kutsujan (email.js) pitää
+// näyttää oma virheilmoituksensa lähetyksen kontekstissa.
+export async function getInvoicePdfBase64(inv) {
+  const pdf = await generateInvoicePdfDoc(inv);
+  const dataUri = pdf.output("datauristring");
+  return dataUri.split(",")[1] || "";
 }
 
 registerAction("download-invoice-pdf", async ({id, store}) => {
