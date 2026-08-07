@@ -20,6 +20,7 @@ import "./tutkinnot.js";
 import "./admin.js";
 import "./backup.js";
 import "./pdf.js";
+import "./drive-backup.js";
 
 const store = createStore(initialState);
 const appEl = document.getElementById("app");
