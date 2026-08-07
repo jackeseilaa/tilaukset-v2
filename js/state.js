@@ -56,11 +56,7 @@ export const initialState = {
   searchTutkinnot: "",
 
   // Admin (lue-vain diagnostiikka)
-  adminOrphanIds: [],
-
-  // Sähköpostilähetys (modal==="email")
-  emailDraft: null,
-  emailSending: false
+  adminOrphanIds: []
 };
 
 export const ISSUERS = {

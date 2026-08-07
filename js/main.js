@@ -20,7 +20,6 @@ import "./tutkinnot.js";
 import "./admin.js";
 import "./backup.js";
 import "./pdf.js";
-import "./email.js";
 
 const store = createStore(initialState);
 const appEl = document.getElementById("app");

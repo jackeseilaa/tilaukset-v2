@@ -19,9 +19,8 @@ import {renderKyselytView} from "./kyselyt-view.js";
 import {renderTutkinnotView} from "./tutkinnot-view.js";
 import {renderTutkintoModal} from "./tutkinto-modal.js";
 import {renderAdminView} from "./admin-view.js";
-import {renderEmailModal} from "./email-modal.js";
 
-export const APP_VERSION = "V1.9.0";
+export const APP_VERSION = "V1.8.2";
 
 registerAction("set-tab", ({el, store}) => { store.setState({tab: el.dataset.tab}); });
 registerAction("close-modal", ({store}) => { store.setState({modal: null, editId: null}); });
@@ -77,7 +76,6 @@ function renderModal(state) {
   if (state.modal === "block-day") return renderBlockDayModal(state);
   if (state.modal === "customer") return renderCustomerModal(state);
   if (state.modal === "tutkinto") return renderTutkintoModal(state);
-  if (state.modal === "email") return renderEmailModal(state);
   return "";
 }
 
