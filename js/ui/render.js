@@ -20,7 +20,7 @@ import {renderTutkinnotView} from "./tutkinnot-view.js";
 import {renderTutkintoModal} from "./tutkinto-modal.js";
 import {renderAdminView} from "./admin-view.js";
 
-export const APP_VERSION = "V1.9.1";
+export const APP_VERSION = "V1.9.2";
 
 registerAction("set-tab", ({el, store}) => { store.setState({tab: el.dataset.tab}); });
 registerAction("close-modal", ({store}) => { store.setState({modal: null, editId: null}); });
@@ -96,7 +96,8 @@ export function render(store) {
   const ae = document.activeElement;
   const keepAction = ae?.dataset?.action || null;
   const keepBind = ae?.dataset?.bind || null;
-  const keepPos = (ae && typeof ae.selectionStart === "number") ? ae.selectionStart : null;
+  let keepPos = null;
+  try { keepPos = (ae && typeof ae.selectionStart === "number") ? ae.selectionStart : null; } catch (e) {}
 
   appEl.innerHTML = renderTopBar(state) + renderNavTabs(state) +
     `<div class="main-content">${renderTab(state)}</div>` +
