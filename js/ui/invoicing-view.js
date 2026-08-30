@@ -1,6 +1,7 @@
 import {esc, fmtDate} from "../format.js";
 import {ISSUERS} from "../state.js";
 import {computeInvoice, INV_TYPE_LABELS} from "../invoices.js";
+import {isIntlSailing} from "../sailings.js";
 
 function invTypeBadge(t) {
   if (t === "reservation") return `<span class="badge badge-blue" style="font-size:10px">Varausmaksu</span>`;
@@ -62,6 +63,9 @@ export function renderInvoicingView(state) {
   const inv = computeInvoice(state, d);
   const issuerInfo = ISSUERS[d.issuer || "tmi"] || ISSUERS.tmi;
   const invTitle = isCredit ? "HYVITYSLASKU" : itype === "reservation" ? "LASKU — VARAUSMAKSU" : itype === "partial" ? "LASKU — OSASUORITUS" : "LASKU — LOPPULASKU";
+  const autoRate = source === "tutkinto" ? 25.5 : selS ? (isIntlSailing(selS) ? 0 : selS.type === "Charter" ? 13.5 : 25.5) : 25.5;
+  const autoRateLabel = String(autoRate).replace(".", ",");
+  const autoLineText = selS ? `${selS.name} — ${fmtDate(selS.date)}` : "esim. Charterpurjehdus, koko vene";
 
   const sailOpts = state.sailings.slice().sort((a, b) => (b.date || "").localeCompare(a.date || "")).map(s => `<option value="${s.id}" ${s.id === d.sailingId ? "selected" : ""}>${esc(s.type || "Purjehdus")} · ${fmtDate(s.date)} — ${esc(s.name)}</option>`).join("");
   const tutkintoOpts = state.tutkinnot.slice().sort((a, b) => (b.date || "").localeCompare(a.date || "")).map(t => `<option value="${t.id}" ${t.id === d.tutkintoId ? "selected" : ""}>${esc(t.type)}${t.boatType ? ` (${esc(t.boatType)})` : ""} — ${fmtDate(t.date)}</option>`).join("");
@@ -87,6 +91,19 @@ export function renderInvoicingView(state) {
       <div class="field"><label class="lbl">Päivä</label><input type="date" data-bind="invoiceDraft.invoiceDate" value="${esc(d.invoiceDate || "")}"></div>
       ${(isPartial || (isReservation && !hasFee)) ? `<div class="field"><label class="lbl">${isReservation ? "Varausmaksun summa (€ brutto)" : "Osasuorituksen summa (€ brutto)"}</label><input type="text" inputmode="decimal" data-bind="invoiceDraft.partialAmount" value="${esc(String(d.partialAmount || ""))}" placeholder="esim. 150.00"></div>` : ""}
     </div>
+    ${!isCredit ? `<div class="grid2" style="margin-top:10px">
+      <div class="field"><label class="lbl">ALV-kanta</label>
+        <select data-bind="invoiceDraft.vatRateOverride">
+          <option value="" ${!d.vatRateOverride ? "selected" : ""}>Automaattinen (${autoRateLabel} %)</option>
+          <option value="25.5" ${d.vatRateOverride === "25.5" ? "selected" : ""}>25,5 %</option>
+          <option value="13.5" ${d.vatRateOverride === "13.5" ? "selected" : ""}>13,5 %</option>
+          <option value="0" ${d.vatRateOverride === "0" ? "selected" : ""}>0 % (kansainvälinen / veroton)</option>
+        </select>
+      </div>
+      <div class="field"><label class="lbl">Laskurivin teksti <span style="font-weight:400;text-transform:none;font-size:11px;color:#6b7280">— tyhjä = automaattinen</span></label>
+        <input data-bind="invoiceDraft.lineTextOverride" value="${esc(d.lineTextOverride || "")}" placeholder="${esc(autoLineText)}">
+      </div>
+    </div>` : ""}
     ${isCredit ? `<div class="field" style="margin-top:10px"><label class="lbl">Kohdistetaan laskulle</label><select data-bind="invoiceDraft.creditRefId"><option value="">-- valitse alkuperäinen lasku --</option>${creditRefOpts}</select>${inv.creditRef ? `<div class="infobox infobox-amber" style="margin-top:8px">Hyvitetään lasku ${esc(inv.creditRef.invoiceNo)} · ${Number(inv.creditRef.grossTotal || 0).toFixed(2)} €</div>` : ""}</div>` : ""}
     <div class="field" style="margin-top:10px"><label class="lbl">Huomautus laskulle</label><textarea data-bind="invoiceDraft.note" rows="2" placeholder="esim. Meriprojekti">${esc(d.note || "")}</textarea></div>
     <div class="row" style="margin:14px 0;flex-wrap:wrap;gap:10px">

@@ -51,7 +51,7 @@ export async function allocateInvoiceNumber() {
 }
 
 export function emptyInvoiceDraft(issuer) {
-  return {issuer: issuer || "tmi", source: "sailing", sailingId: "", tutkintoId: "", mode: "customer", type: "full", invoiceDate: today(), customerId: "", companyId: "", partialAmount: "", creditRefId: "", note: "", tuoteLines: {}};
+  return {issuer: issuer || "tmi", source: "sailing", sailingId: "", tutkintoId: "", mode: "customer", type: "full", invoiceDate: today(), customerId: "", companyId: "", partialAmount: "", creditRefId: "", note: "", tuoteLines: {}, vatRateOverride: "", lineTextOverride: ""};
 }
 
 function alreadyInvoicedReservationFee(state, sailingId, payerName) {
@@ -64,7 +64,12 @@ function computeSailingBase(state, draft, {itype, isPartial, isReservation}) {
   const s = state.sailings.find(x => x.id === draft.sailingId) || null;
   const isCharter = s?.type === "Charter";
   const isInternational = isIntlSailing(s);
-  const ratePct = isInternational ? VAT_RATES.KANSAINVALINEN : isCharter ? VAT_RATES.ALENNETTU : VAT_RATES.YLEINEN;
+  // ALV-kanta: käyttäjän valinta laskulla voittaa, muuten tapahtuman mukaan.
+  const ratePct = (draft.vatRateOverride != null && draft.vatRateOverride !== "")
+    ? Number(draft.vatRateOverride)
+    : isInternational ? VAT_RATES.KANSAINVALINEN : isCharter ? VAT_RATES.ALENNETTU : VAT_RATES.YLEINEN;
+  // Vapaa laskurivin teksti (tyhjä = automaattinen otsikko tapahtuman nimestä).
+  const lineText = (draft.lineTextOverride || "").trim();
   let payerName = "", payerEmail = "", payerBusinessId = "", lines = [], grossTotal = 0;
   const eventName = s?.name || "";
   if (!s) return {sailing: s, ratePct, payerName, payerEmail, payerBusinessId, lines, grossTotal, eventName};
@@ -88,7 +93,7 @@ function computeSailingBase(state, draft, {itype, isPartial, isReservation}) {
       }
       const effectivePrice = (c.priceOverride != null && c.priceOverride !== "") ? Number(c.priceOverride) : price;
       const priceNote = (c.priceOverride != null && c.priceOverride !== "") ? " (yksilöllinen hinta)" : "";
-      lines.push({title: `${s.name} — ${INV_TYPE_LABELS[itype]} — ${c.name}${priceNote}`, qty: 1, unit: effectivePrice, total: effectivePrice, ratePct});
+      lines.push({title: lineText || `${s.name} — ${INV_TYPE_LABELS[itype]} — ${c.name}${priceNote}`, qty: 1, unit: effectivePrice, total: effectivePrice, ratePct});
       grossTotal = effectivePrice;
       const alreadyFee = (itype === "full") ? alreadyInvoicedReservationFee(state, s.id, payerName) : 0;
       if (alreadyFee > 0) {
@@ -109,13 +114,13 @@ function computeSailingBase(state, draft, {itype, isPartial, isReservation}) {
       let gross;
       if (isPartial) {
         gross = price;
-        lines.push({title: `${s.name} — Osasuoritus`, qty: 1, unit: price, total: price, ratePct});
+        lines.push({title: lineText || `${s.name} — Osasuoritus`, qty: 1, unit: price, total: price, ratePct});
       } else if (useFixed) {
         gross = fixedPrice;
-        lines.push({title: `${s.name} — ${INV_TYPE_LABELS[itype]}`, qty: 1, unit: fixedPrice, total: fixedPrice, ratePct});
+        lines.push({title: lineText || `${s.name} — ${INV_TYPE_LABELS[itype]}`, qty: 1, unit: fixedPrice, total: fixedPrice, ratePct});
       } else {
         gross = cust.length * price;
-        for (const c of cust) lines.push({title: `${s.name} — ${INV_TYPE_LABELS[itype]} — ${c.name}`, qty: 1, unit: price, total: price, ratePct});
+        for (const c of cust) lines.push({title: lineText ? `${lineText} — ${c.name}` : `${s.name} — ${INV_TYPE_LABELS[itype]} — ${c.name}`, qty: 1, unit: price, total: price, ratePct});
       }
       const alreadyFee = (itype === "full") ? alreadyInvoicedReservationFee(state, s.id, payerName) : 0;
       if (alreadyFee > 0) {
@@ -135,7 +140,9 @@ function computeSailingBase(state, draft, {itype, isPartial, isReservation}) {
 // ei ole charter-/kansainvälisyyskonseptia kuten purjehduksilla.
 function computeTutkintoBase(state, draft, {itype, isPartial, isReservation}) {
   const t = state.tutkinnot.find(x => x.id === draft.tutkintoId) || null;
-  const ratePct = VAT_RATES.YLEINEN;
+  const ratePct = (draft.vatRateOverride != null && draft.vatRateOverride !== "")
+    ? Number(draft.vatRateOverride) : VAT_RATES.YLEINEN;
+  const lineText = (draft.lineTextOverride || "").trim();
   let payerName = "", payerEmail = "", payerBusinessId = "", lines = [], grossTotal = 0;
   const baseEventName = t ? (t.type || "") + (t.boatType ? ` (${t.boatType})` : "") : "";
   if (!t) return {tutkinto: t, ratePct, payerName, payerEmail, payerBusinessId, lines, grossTotal, eventName: baseEventName};
@@ -148,7 +155,7 @@ function computeTutkintoBase(state, draft, {itype, isPartial, isReservation}) {
     let price = (isPartial || isReservation) ? (parseFloat(draft.partialAmount || 0) || 0) : ((c.priceOverride != null && c.priceOverride !== "") ? Number(c.priceOverride) : Number(t.pricePerPerson || 0));
     if (!price) price = parseFloat(draft.partialAmount || 0) || 0;
     payerName = c.name || ""; payerEmail = c.email || "";
-    lines.push({title: `${eventName} — ${INV_TYPE_LABELS[itype]} — ${c.name}`, qty: 1, unit: price, total: price, ratePct});
+    lines.push({title: lineText || `${eventName} — ${INV_TYPE_LABELS[itype]} — ${c.name}`, qty: 1, unit: price, total: price, ratePct});
     grossTotal = price;
   }
   return {tutkinto: t, ratePct, payerName, payerEmail, payerBusinessId, lines, grossTotal, eventName};
@@ -243,7 +250,8 @@ registerAction("edit-invoice", ({id, store}) => {
       type: inv.itype || "full", invoiceDate: inv.invoiceDate || today(),
       customerId: inv.customerId || "", companyId,
       partialAmount: (inv.itype === "partial" || inv.itype === "reservation") ? String(inv.grossTotal ?? "") : "",
-      creditRefId: inv.creditRefId || "", note: inv.note || "", tuoteLines: {...(inv.tuoteLines || {})}
+      creditRefId: inv.creditRefId || "", note: inv.note || "", tuoteLines: {...(inv.tuoteLines || {})},
+      vatRateOverride: inv.vatRateOverride || "", lineTextOverride: inv.lineTextOverride || ""
     }
   });
 });
@@ -262,7 +270,7 @@ registerAction("new-credit-note", ({id, store}) => {
       tutkintoId: source === "tutkinto" ? (inv.eventId || "") : "",
       mode: inv.mode || "customer",
       type: "credit", invoiceDate: today(), customerId: inv.customerId || "", companyId: "",
-      partialAmount: "", creditRefId: id, note: "", tuoteLines: {}
+      partialAmount: "", creditRefId: id, note: "", tuoteLines: {}, vatRateOverride: "", lineTextOverride: ""
     }
   });
 });
@@ -318,7 +326,8 @@ registerAction("save-invoice", async ({store}) => {
     vatBreakdown: inv.vatBreakdown, tuoteLines,
     lines: inv.lines, paid: existing?.paid || false, paidDate: existing?.paidDate || "",
     coveredCustomerIds: (source === "tutkinto" || d.mode === "customer" || d.mode === "customer-company") ? [d.customerId] : [],
-    customerId: d.customerId || "", note: (d.note || "").trim()
+    customerId: d.customerId || "", note: (d.note || "").trim(),
+    vatRateOverride: d.vatRateOverride || "", lineTextOverride: (d.lineTextOverride || "").trim()
   };
   if (existing) await fsSet("invoices", editingId, rec, store);
   else await fsAdd("invoices", rec, store);
