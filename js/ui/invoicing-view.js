@@ -1,6 +1,6 @@
 import {esc, fmtDate, addDays} from "../format.js";
 import {ISSUERS} from "../state.js";
-import {computeInvoice, INV_TYPE_LABELS} from "../invoices.js";
+import {computeInvoice, INV_TYPE_LABELS, effectivePaymentDays, suggestedPaymentDays} from "../invoices.js";
 import {isIntlSailing} from "../sailings.js";
 
 function invTypeBadge(t) {
@@ -66,8 +66,12 @@ export function renderInvoicingView(state) {
   const autoRate = source === "tutkinto" ? 25.5 : selS ? (isIntlSailing(selS) ? 0 : selS.type === "Charter" ? 13.5 : 25.5) : 25.5;
   const autoRateLabel = String(autoRate).replace(".", ",");
   const autoLineText = selS ? `${selS.name} — ${fmtDate(selS.date)}` : "esim. Charterpurjehdus, koko vene";
-  const pdVal = (d.paymentDays === "" || d.paymentDays == null) ? 14 : Number(d.paymentDays) || 0;
+  const pdVal = effectivePaymentDays(state, d);
+  const suggPd = suggestedPaymentDays(state, d);
   const dueDate = d.invoiceDate ? (pdVal === 0 ? d.invoiceDate : addDays(d.invoiceDate, pdVal)) : "";
+  const pdPresets = [0, 3, 7, 14, 21];
+  const pdOptions = (pdPresets.includes(pdVal) ? pdPresets : [...pdPresets, pdVal].sort((a, b) => a - b))
+    .map(n => `<option value="${n}" ${n === pdVal ? "selected" : ""}>${n === 0 ? "Heti eräpäivä" : n + " vrk netto"}</option>`).join("");
 
   const sailOpts = state.sailings.slice().sort((a, b) => (b.date || "").localeCompare(a.date || "")).map(s => `<option value="${s.id}" ${s.id === d.sailingId ? "selected" : ""}>${esc(s.type || "Purjehdus")} · ${fmtDate(s.date)} — ${esc(s.name)}</option>`).join("");
   const tutkintoOpts = state.tutkinnot.slice().sort((a, b) => (b.date || "").localeCompare(a.date || "")).map(t => `<option value="${t.id}" ${t.id === d.tutkintoId ? "selected" : ""}>${esc(t.type)}${t.boatType ? ` (${esc(t.boatType)})` : ""} — ${fmtDate(t.date)}</option>`).join("");
@@ -91,7 +95,7 @@ export function renderInvoicingView(state) {
       : `<div class="field" style="margin-top:10px"><label class="lbl">Tapahtuma *</label><select data-bind="invoiceDraft.sailingId"><option value="">-- valitse --</option>${sailOpts}</select></div>`) : ""}
     <div class="grid2" style="margin-top:10px">
       <div class="field"><label class="lbl">Laskun päivä</label><input type="date" data-bind="invoiceDraft.invoiceDate" value="${esc(d.invoiceDate || "")}"></div>
-      <div class="field"><label class="lbl">Maksuehto (vrk netto)</label><input type="number" min="0" step="1" data-bind="invoiceDraft.paymentDays" value="${esc(String(pdVal))}"><div class="small muted" style="margin-top:4px">Eräpäivä: <strong>${dueDate ? fmtDate(dueDate) : "—"}</strong>${pdVal === 0 ? " (heti)" : ""}</div></div>
+      ${!isCredit ? `<div class="field"><label class="lbl">Maksuehto</label><select data-bind="invoiceDraft.paymentDays">${pdOptions}</select><div class="small muted" style="margin-top:4px">Eräpäivä: <strong>${dueDate ? fmtDate(dueDate) : "—"}</strong> · ehdotus tapahtuman ajankohdan mukaan: ${suggPd === 0 ? "heti" : suggPd + " vrk"}</div></div>` : ""}
     </div>
     ${(isPartial || (isReservation && !hasFee)) ? `<div class="field" style="margin-top:10px"><label class="lbl">${isReservation ? "Varausmaksun summa (€ brutto)" : "Osasuorituksen summa (€ brutto)"}</label><input type="text" inputmode="decimal" data-bind="invoiceDraft.partialAmount" value="${esc(String(d.partialAmount || ""))}" placeholder="esim. 150.00"></div>` : ""}
     ${!isCredit ? `<div class="grid2" style="margin-top:10px">

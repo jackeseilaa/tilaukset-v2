@@ -9,6 +9,28 @@ import {ISSUERS} from "./state.js";
 
 export const INV_TYPE_LABELS = {full: "Lasku", reservation: "Varausmaksu", partial: "Osasuoritus", credit: "Hyvityslasku"};
 
+// Maksuehdon oletus tapahtuman ajankohdan mukaan (owner 2026-08-30):
+// alle viikko lähtöön tai jo mennyt / palvelu jo myyty -> 3 vrk,
+// alle kuukausi -> 7 vrk, muuten 14 vrk. Ei tapahtumaa valittu -> 7 vrk.
+export function suggestedPaymentDays(state, draft) {
+  const base = draft.invoiceDate || today();
+  const eventDate = (draft.source || "sailing") === "tutkinto"
+    ? (state.tutkinnot.find(t => t.id === draft.tutkintoId)?.date || "")
+    : (state.sailings.find(s => s.id === draft.sailingId)?.date || "");
+  if (!eventDate) return 7;
+  const days = Math.round((new Date(eventDate + "T12:00:00") - new Date(base + "T12:00:00")) / 86400000);
+  if (days < 7) return 3;
+  if (days < 30) return 7;
+  return 14;
+}
+
+// Efektiivinen maksuehto: käyttäjän valinta jos asetettu, muuten ehdotus.
+export function effectivePaymentDays(state, draft) {
+  const pd = draft.paymentDays;
+  if (pd === "" || pd == null) return suggestedPaymentDays(state, draft);
+  return parseInt(pd, 10) || 0;
+}
+
 export function finnishReference(digits) {
   digits = String(digits || "").replace(/\D/g, "");
   if (!digits) return "";
@@ -51,7 +73,7 @@ export async function allocateInvoiceNumber() {
 }
 
 export function emptyInvoiceDraft(issuer) {
-  return {issuer: issuer || "tmi", source: "sailing", sailingId: "", tutkintoId: "", mode: "customer", type: "full", invoiceDate: today(), customerId: "", companyId: "", partialAmount: "", creditRefId: "", note: "", tuoteLines: {}, vatRateOverride: "", lineTextOverride: "", paymentDays: 14};
+  return {issuer: issuer || "tmi", source: "sailing", sailingId: "", tutkintoId: "", mode: "customer", type: "full", invoiceDate: today(), customerId: "", companyId: "", partialAmount: "", creditRefId: "", note: "", tuoteLines: {}, vatRateOverride: "", lineTextOverride: "", paymentDays: ""};
 }
 
 function alreadyInvoicedReservationFee(state, sailingId, payerName) {
@@ -252,7 +274,7 @@ registerAction("edit-invoice", ({id, store}) => {
       partialAmount: (inv.itype === "partial" || inv.itype === "reservation") ? String(inv.grossTotal ?? "") : "",
       creditRefId: inv.creditRefId || "", note: inv.note || "", tuoteLines: {...(inv.tuoteLines || {})},
       vatRateOverride: inv.vatRateOverride || "", lineTextOverride: inv.lineTextOverride || "",
-      paymentDays: inv.paymentDays != null ? inv.paymentDays : 7
+      paymentDays: inv.paymentDays != null ? inv.paymentDays : ""
     }
   });
 });
@@ -272,7 +294,7 @@ registerAction("new-credit-note", ({id, store}) => {
       mode: inv.mode || "customer",
       type: "credit", invoiceDate: today(), customerId: inv.customerId || "", companyId: "",
       partialAmount: "", creditRefId: id, note: "", tuoteLines: {}, vatRateOverride: "", lineTextOverride: "",
-      paymentDays: inv.paymentDays != null ? inv.paymentDays : 14
+      paymentDays: inv.paymentDays != null ? inv.paymentDays : ""
     }
   });
 });
@@ -330,7 +352,7 @@ registerAction("save-invoice", async ({store}) => {
     coveredCustomerIds: (source === "tutkinto" || d.mode === "customer" || d.mode === "customer-company") ? [d.customerId] : [],
     customerId: d.customerId || "", note: (d.note || "").trim(),
     vatRateOverride: d.vatRateOverride || "", lineTextOverride: (d.lineTextOverride || "").trim(),
-    paymentDays: (d.paymentDays === "" || d.paymentDays == null) ? 14 : (parseInt(d.paymentDays, 10) || 0)
+    paymentDays: effectivePaymentDays(state, d)
   };
   if (existing) await fsSet("invoices", editingId, rec, store);
   else await fsAdd("invoices", rec, store);
