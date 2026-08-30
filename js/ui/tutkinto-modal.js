@@ -26,7 +26,7 @@ export function renderTutkintoModal(state) {
         <div class="field"><label class="lbl">Päättyy</label><input type="time" data-bind="tutkintoDraft.endTime" value="${esc(d.endTime || "")}"></div>
       </div>
       <div class="grid2">
-        <div class="field"><label class="lbl">Hinta/hlö (€)</label><input type="number" min="0" step="0.01" data-bind="tutkintoDraft.pricePerPerson" value="${esc(String(Number(d.pricePerPerson || 0)))}"></div>
+        <div class="field"><label class="lbl">Hinta/hlö (€)</label><input type="text" inputmode="decimal" data-bind="tutkintoDraft.pricePerPerson" value="${esc(d.pricePerPerson ?? "")}"></div>
         <div class="field"><label class="lbl">Paikka</label><input data-bind="tutkintoDraft.location" value="${esc(d.location || "")}" placeholder="esim. Laivakoulu, Loviisa"></div>
       </div>
       <div class="field"><label class="lbl">Lisätiedot</label><textarea data-bind="tutkintoDraft.notes" rows="2" placeholder="Esim. ohjaaja, vaatimukset, huomiot…">${esc(d.notes || "")}</textarea></div>

@@ -48,10 +48,10 @@ export function renderSailingModal(state) {
         <div class="field"><label class="lbl">Varapaikkoja</label><input type="number" min="0" step="1" data-bind="sailingDraft.reserveSlots" value="${esc(String(Number(d.reserveSlots ?? 2)))}"><div class="small muted" style="margin-top:4px">Suositus: vähintään 2</div></div>
       </div>
       <div class="grid2">
-        <div class="field"><label class="lbl">Hinta/hlö (€)</label><input type="number" min="0" step="0.01" data-bind="sailingDraft.pricePerPerson" value="${esc(String(Number(d.pricePerPerson ?? 0)))}"></div>
-        <div class="field"><label class="lbl">Varausmaksu (€)</label><input type="number" min="0" step="0.01" data-bind="sailingDraft.reservationFee" value="${esc(String(Number(d.reservationFee ?? 0)))}"><div class="small muted" style="margin-top:4px">0 = ei varausmaksua</div></div>
+        <div class="field"><label class="lbl">Hinta/hlö (€)</label><input type="text" inputmode="decimal" data-bind="sailingDraft.pricePerPerson" value="${esc(d.pricePerPerson ?? "")}"></div>
+        <div class="field"><label class="lbl">Varausmaksu (€)</label><input type="text" inputmode="decimal" data-bind="sailingDraft.reservationFee" value="${esc(d.reservationFee ?? "")}"><div class="small muted" style="margin-top:4px">0 = ei varausmaksua</div></div>
       </div>
-      <div class="field"><label class="lbl">Kiinteä kokonaishinta (€) <span style="font-weight:400;text-transform:none;font-size:11px;color:#6b7280">(koko charter, myyty könttäsummalla)</span></label><input type="number" min="0" step="0.01" data-bind="sailingDraft.fixedPrice" value="${esc(String(Number(d.fixedPrice ?? 0)))}"><div class="small muted" style="margin-top:4px">Tyhjä / 0 = laskutus hinta/hlö mukaan. Kun täytetty, loppulasku on tämä yhtenä rivinä hlö-määrästä riippumatta.</div></div>
+      <div class="field"><label class="lbl">Kiinteä kokonaishinta (€) <span style="font-weight:400;text-transform:none;font-size:11px;color:#6b7280">(koko charter, myyty könttäsummalla)</span></label><input type="text" inputmode="decimal" data-bind="sailingDraft.fixedPrice" value="${esc(d.fixedPrice ?? "")}"><div class="small muted" style="margin-top:4px">Tyhjä / 0 = laskutus hinta/hlö mukaan. Kun täytetty, loppulasku on tämä yhtenä rivinä hlö-määrästä riippumatta.</div></div>
       <div class="row" style="justify-content:flex-end;margin-top:16px">
         <button class="btn btn-primary" data-action="save-sailing">${editing ? "Tallenna muutokset" : "Tallenna"}</button>
       </div>

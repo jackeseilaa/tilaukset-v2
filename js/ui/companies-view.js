@@ -36,7 +36,7 @@ export function renderCompanyModal(state) {
         <div class="field"><label class="lbl">Y-tunnus</label><input data-bind="companyDraft.businessId" value="${esc(d.businessId || "")}" placeholder="1234567-8"></div>
         <div class="field"><label class="lbl">Sähköposti</label><input data-bind="companyDraft.email" value="${esc(d.email || "")}" placeholder="laskutus@yritys.fi"></div>
       </div>
-      <div class="field"><label class="lbl">Provisio (%)</label><input type="number" min="0" step="0.01" data-bind="companyDraft.commissionPct" value="${esc(String(d.commissionPct ?? 0))}"></div>
+      <div class="field"><label class="lbl">Provisio (%)</label><input type="text" inputmode="decimal" data-bind="companyDraft.commissionPct" value="${esc(String(d.commissionPct ?? 0))}"></div>
       <div class="row" style="justify-content:flex-end;margin-top:16px"><button class="btn btn-primary" data-action="save-company">${editing ? "Tallenna muutokset" : "Tallenna"}</button></div>
     </div>
   </div></div>`;

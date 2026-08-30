@@ -66,7 +66,7 @@ export function renderCustomerModal(state) {
       </div>
       <div class="field" style="margin-top:12px">
         <label class="lbl">Yksilöllinen hinta (€) <span style="font-weight:400;text-transform:none;font-size:11px;color:#6b7280">— tyhjä = tapahtuman hinta</span></label>
-        <input type="number" min="0" step="0.01" data-bind="customerDraft.priceOverride" value="${esc(d.priceOverride || "")}" placeholder="Ylikirjoittaa tapahtuman hinnan">
+        <input type="text" inputmode="decimal" data-bind="customerDraft.priceOverride" value="${esc(d.priceOverride || "")}" placeholder="Ylikirjoittaa tapahtuman hinnan">
       </div>
       <div class="row" style="justify-content:flex-end;margin-top:16px"><button class="btn btn-primary" data-action="save-customer">${editing ? "Tallenna muutokset" : "Tallenna"}</button></div>
     </div>

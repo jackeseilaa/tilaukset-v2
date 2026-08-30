@@ -20,7 +20,7 @@ import {renderTutkinnotView} from "./tutkinnot-view.js";
 import {renderTutkintoModal} from "./tutkinto-modal.js";
 import {renderAdminView} from "./admin-view.js";
 
-export const APP_VERSION = "V1.9.3";
+export const APP_VERSION = "V1.9.4";
 
 registerAction("set-tab", ({el, store}) => { store.setState({tab: el.dataset.tab}); });
 registerAction("close-modal", ({store}) => { store.setState({modal: null, editId: null}); });
@@ -112,6 +112,14 @@ export function render(store) {
       el.focus();
       if (keepPos !== null && typeof el.setSelectionRange === "function") {
         try { el.setSelectionRange(keepPos, keepPos); } catch (e) {}
+      } else if (el.tagName === "INPUT" && el.type === "number" && el.value) {
+        // type="number": selectionStart/-Range heittää poikkeuksen, joten
+        // kohdistinta ei voi palauttaa. Lisäksi .focus() valitsee koko arvon
+        // (kuten Tab-fokus Chromessa) — ilman tätä seuraava näppäin korvaisi
+        // juuri kirjoitetun ja kenttään sai vain yhden numeron. Arvon
+        // uudelleenasetus siirtää kohdistimen loppuun ilman valintaa.
+        const v = el.value;
+        try { el.value = ""; el.value = v; } catch (e) {}
       }
     }
   }

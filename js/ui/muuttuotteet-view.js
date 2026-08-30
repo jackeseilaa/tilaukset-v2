@@ -17,7 +17,7 @@ export function renderMuutTuotteetView(state) {
         <div class="field"><label class="lbl">Tuoteryhmä</label><input data-bind="muuTuoteDraft.ryhma" value="${esc(d.ryhma || "")}" placeholder="esim. Materiaali, Palvelu"></div>
       </div>
       <div class="grid3">
-        <div class="field"><label class="lbl">Hinta (€ sis. ALV)</label><input type="number" min="0" step="0.01" data-bind="muuTuoteDraft.hinta" value="${esc(String(d.hinta || ""))}"></div>
+        <div class="field"><label class="lbl">Hinta (€ sis. ALV)</label><input type="text" inputmode="decimal" data-bind="muuTuoteDraft.hinta" value="${esc(String(d.hinta || ""))}"></div>
         <div class="field"><label class="lbl">ALV-%</label>
           <select data-bind="muuTuoteDraft.alv">
             <option value="25.5" ${(d.alv || "25.5") === "25.5" ? "selected" : ""}>25,5 %</option>

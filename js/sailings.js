@@ -30,7 +30,7 @@ export function emptySailingDraft(date) {
     name: "", reitti: "", kansainvalinen: false,
     type: SAILING_TYPES[0], date: date || today(), endDate: "",
     startTime: "", endTime: "",
-    maxPersons: 6, reserveSlots: 2, pricePerPerson: 0, reservationFee: 0, fixedPrice: 0
+    maxPersons: 6, reserveSlots: 2, pricePerPerson: 0, reservationFee: 0, fixedPrice: ""
   };
 }
 
@@ -41,7 +41,7 @@ function draftFromSailing(s) {
     startTime: s.startTime || "", endTime: s.endTime || "",
     maxPersons: Number(s.maxPersons ?? 6), reserveSlots: Number(s.reserveSlots ?? 2),
     pricePerPerson: Number(s.pricePerPerson ?? 0), reservationFee: Number(s.reservationFee ?? 0),
-    fixedPrice: Number(s.fixedPrice ?? 0)
+    fixedPrice: s.fixedPrice ? Number(s.fixedPrice) : ""
   };
 }
 
