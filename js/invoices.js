@@ -51,7 +51,7 @@ export async function allocateInvoiceNumber() {
 }
 
 export function emptyInvoiceDraft(issuer) {
-  return {issuer: issuer || "tmi", source: "sailing", sailingId: "", tutkintoId: "", mode: "customer", type: "full", invoiceDate: today(), customerId: "", companyId: "", partialAmount: "", creditRefId: "", note: "", tuoteLines: {}, vatRateOverride: "", lineTextOverride: ""};
+  return {issuer: issuer || "tmi", source: "sailing", sailingId: "", tutkintoId: "", mode: "customer", type: "full", invoiceDate: today(), customerId: "", companyId: "", partialAmount: "", creditRefId: "", note: "", tuoteLines: {}, vatRateOverride: "", lineTextOverride: "", paymentDays: 14};
 }
 
 function alreadyInvoicedReservationFee(state, sailingId, payerName) {
@@ -251,7 +251,8 @@ registerAction("edit-invoice", ({id, store}) => {
       customerId: inv.customerId || "", companyId,
       partialAmount: (inv.itype === "partial" || inv.itype === "reservation") ? String(inv.grossTotal ?? "") : "",
       creditRefId: inv.creditRefId || "", note: inv.note || "", tuoteLines: {...(inv.tuoteLines || {})},
-      vatRateOverride: inv.vatRateOverride || "", lineTextOverride: inv.lineTextOverride || ""
+      vatRateOverride: inv.vatRateOverride || "", lineTextOverride: inv.lineTextOverride || "",
+      paymentDays: inv.paymentDays != null ? inv.paymentDays : 7
     }
   });
 });
@@ -270,7 +271,8 @@ registerAction("new-credit-note", ({id, store}) => {
       tutkintoId: source === "tutkinto" ? (inv.eventId || "") : "",
       mode: inv.mode || "customer",
       type: "credit", invoiceDate: today(), customerId: inv.customerId || "", companyId: "",
-      partialAmount: "", creditRefId: id, note: "", tuoteLines: {}, vatRateOverride: "", lineTextOverride: ""
+      partialAmount: "", creditRefId: id, note: "", tuoteLines: {}, vatRateOverride: "", lineTextOverride: "",
+      paymentDays: inv.paymentDays != null ? inv.paymentDays : 14
     }
   });
 });
@@ -327,7 +329,8 @@ registerAction("save-invoice", async ({store}) => {
     lines: inv.lines, paid: existing?.paid || false, paidDate: existing?.paidDate || "",
     coveredCustomerIds: (source === "tutkinto" || d.mode === "customer" || d.mode === "customer-company") ? [d.customerId] : [],
     customerId: d.customerId || "", note: (d.note || "").trim(),
-    vatRateOverride: d.vatRateOverride || "", lineTextOverride: (d.lineTextOverride || "").trim()
+    vatRateOverride: d.vatRateOverride || "", lineTextOverride: (d.lineTextOverride || "").trim(),
+    paymentDays: (d.paymentDays === "" || d.paymentDays == null) ? 14 : (parseInt(d.paymentDays, 10) || 0)
   };
   if (existing) await fsSet("invoices", editingId, rec, store);
   else await fsAdd("invoices", rec, store);

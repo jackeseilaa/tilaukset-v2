@@ -1,4 +1,4 @@
-import {esc, fmtDate} from "../format.js";
+import {esc, fmtDate, addDays} from "../format.js";
 import {ISSUERS} from "../state.js";
 import {computeInvoice, INV_TYPE_LABELS} from "../invoices.js";
 import {isIntlSailing} from "../sailings.js";
@@ -66,6 +66,8 @@ export function renderInvoicingView(state) {
   const autoRate = source === "tutkinto" ? 25.5 : selS ? (isIntlSailing(selS) ? 0 : selS.type === "Charter" ? 13.5 : 25.5) : 25.5;
   const autoRateLabel = String(autoRate).replace(".", ",");
   const autoLineText = selS ? `${selS.name} — ${fmtDate(selS.date)}` : "esim. Charterpurjehdus, koko vene";
+  const pdVal = (d.paymentDays === "" || d.paymentDays == null) ? 14 : Number(d.paymentDays) || 0;
+  const dueDate = d.invoiceDate ? (pdVal === 0 ? d.invoiceDate : addDays(d.invoiceDate, pdVal)) : "";
 
   const sailOpts = state.sailings.slice().sort((a, b) => (b.date || "").localeCompare(a.date || "")).map(s => `<option value="${s.id}" ${s.id === d.sailingId ? "selected" : ""}>${esc(s.type || "Purjehdus")} · ${fmtDate(s.date)} — ${esc(s.name)}</option>`).join("");
   const tutkintoOpts = state.tutkinnot.slice().sort((a, b) => (b.date || "").localeCompare(a.date || "")).map(t => `<option value="${t.id}" ${t.id === d.tutkintoId ? "selected" : ""}>${esc(t.type)}${t.boatType ? ` (${esc(t.boatType)})` : ""} — ${fmtDate(t.date)}</option>`).join("");
@@ -88,9 +90,10 @@ export function renderInvoicingView(state) {
       ? `<div class="field" style="margin-top:10px"><label class="lbl">Tutkinto *</label><select data-bind="invoiceDraft.tutkintoId"><option value="">-- valitse --</option>${tutkintoOpts}</select></div>`
       : `<div class="field" style="margin-top:10px"><label class="lbl">Tapahtuma *</label><select data-bind="invoiceDraft.sailingId"><option value="">-- valitse --</option>${sailOpts}</select></div>`) : ""}
     <div class="grid2" style="margin-top:10px">
-      <div class="field"><label class="lbl">Päivä</label><input type="date" data-bind="invoiceDraft.invoiceDate" value="${esc(d.invoiceDate || "")}"></div>
-      ${(isPartial || (isReservation && !hasFee)) ? `<div class="field"><label class="lbl">${isReservation ? "Varausmaksun summa (€ brutto)" : "Osasuorituksen summa (€ brutto)"}</label><input type="text" inputmode="decimal" data-bind="invoiceDraft.partialAmount" value="${esc(String(d.partialAmount || ""))}" placeholder="esim. 150.00"></div>` : ""}
+      <div class="field"><label class="lbl">Laskun päivä</label><input type="date" data-bind="invoiceDraft.invoiceDate" value="${esc(d.invoiceDate || "")}"></div>
+      <div class="field"><label class="lbl">Maksuehto (vrk netto)</label><input type="number" min="0" step="1" data-bind="invoiceDraft.paymentDays" value="${esc(String(pdVal))}"><div class="small muted" style="margin-top:4px">Eräpäivä: <strong>${dueDate ? fmtDate(dueDate) : "—"}</strong>${pdVal === 0 ? " (heti)" : ""}</div></div>
     </div>
+    ${(isPartial || (isReservation && !hasFee)) ? `<div class="field" style="margin-top:10px"><label class="lbl">${isReservation ? "Varausmaksun summa (€ brutto)" : "Osasuorituksen summa (€ brutto)"}</label><input type="text" inputmode="decimal" data-bind="invoiceDraft.partialAmount" value="${esc(String(d.partialAmount || ""))}" placeholder="esim. 150.00"></div>` : ""}
     ${!isCredit ? `<div class="grid2" style="margin-top:10px">
       <div class="field"><label class="lbl">ALV-kanta</label>
         <select data-bind="invoiceDraft.vatRateOverride">
@@ -116,7 +119,7 @@ export function renderInvoicingView(state) {
   <div class="card"><div class="invoice-box">
     <div class="row-between">
       <div style="line-height:1.7;font-size:14px"><strong style="font-size:16px;color:${isCredit ? "#991b1b" : "#111827"}">${invTitle}</strong><br>${esc(issuerInfo.name)}<br>Y-tunnus ${esc(issuerInfo.businessId)}<br>${esc(issuerInfo.address)}<br><span class="small" style="color:#6b7280">IBAN</span> ${esc(issuerInfo.iban)}<br><span class="small" style="color:#6b7280">BIC</span> ${esc(issuerInfo.bic)}</div>
-      <div style="text-align:right;line-height:1.7;font-size:14px"><strong style="color:#0a4272;font-size:15px">Nro: ${esc(inv.invNoPreview)}</strong><br>Päivä: ${esc(d.invoiceDate || "")}<br>Viite: <strong>${esc(inv.reference)}</strong>${inv.creditRef ? `<br><span class="small muted">Hyvittää: ${esc(inv.creditRef.invoiceNo)}</span>` : ""}</div>
+      <div style="text-align:right;line-height:1.7;font-size:14px"><strong style="color:#0a4272;font-size:15px">Nro: ${esc(inv.invNoPreview)}</strong><br>Päivä: ${esc(d.invoiceDate || "")}${!isCredit ? `<br>Eräpäivä: <strong>${dueDate ? esc(fmtDate(dueDate)) : "—"}</strong>` : ""}<br>Viite: <strong>${esc(inv.reference)}</strong>${inv.creditRef ? `<br><span class="small muted">Hyvittää: ${esc(inv.creditRef.invoiceNo)}</span>` : ""}</div>
     </div>
     <div class="hr"></div>
     <div style="font-size:14px;line-height:1.7"><strong>Maksaja:</strong><br>${esc(inv.payerName || "—")}${inv.payerBusinessId ? `<div class="small muted">Y-tunnus ${esc(inv.payerBusinessId)}</div>` : ""}${inv.payerEmail ? `<div><a href="mailto:${esc(inv.payerEmail)}" style="color:#1e40af">${esc(inv.payerEmail)}</a></div>` : ""}</div>
