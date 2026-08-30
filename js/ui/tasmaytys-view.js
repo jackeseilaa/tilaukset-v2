@@ -3,7 +3,15 @@ import {custIdentityKey, custEventLabel, custEventDate} from "../customers.js";
 
 function custExpectedPrice(state, c) {
   if (c.priceOverride != null && c.priceOverride !== "") return Number(c.priceOverride) || 0;
-  if (c.sailingId) { const s = state.sailings.find(x => x.id === c.sailingId); return s ? Number(s.pricePerPerson || 0) : 0; }
+  if (c.sailingId) {
+    const s = state.sailings.find(x => x.id === c.sailingId);
+    if (!s) return 0;
+    // Kiinteähintainen charter laskutetaan kertaalleen yhdelle maksajalle
+    // (tunnistuu suoraan coveredCustomerIds-osumasta) — muille osallistujille
+    // ei kohdistu erillistä odotettua summaa.
+    if (Number(s.fixedPrice || 0) > 0) return 0;
+    return Number(s.pricePerPerson || 0);
+  }
   return 0;
 }
 

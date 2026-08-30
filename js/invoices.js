@@ -69,7 +69,12 @@ function computeSailingBase(state, draft, {itype, isPartial, isReservation}) {
   const eventName = s?.name || "";
   if (!s) return {sailing: s, ratePct, payerName, payerEmail, payerBusinessId, lines, grossTotal, eventName};
 
-  let price = isReservation ? Number(s.reservationFee || 0) : Number(s.pricePerPerson || 0);
+  // Kiinteä kokonaishinta (charter myyty könttäsummalla) korvaa hlö-hinnan
+  // loppulaskulla — ei koske varausmaksua eikä osasuoritusta.
+  const isFullType = !isPartial && !isReservation;
+  const fixedPrice = Number(s.fixedPrice || 0);
+  const useFixed = isFullType && fixedPrice > 0;
+  let price = isReservation ? Number(s.reservationFee || 0) : useFixed ? fixedPrice : Number(s.pricePerPerson || 0);
   if (isPartial || (isReservation && !Number(s.reservationFee || 0))) price = parseFloat(draft.partialAmount || 0) || 0;
 
   if (draft.mode === "customer" || draft.mode === "customer-company") {
@@ -101,9 +106,17 @@ function computeSailingBase(state, draft, {itype, isPartial, isReservation}) {
     if (co) {
       payerName = co.name || ""; payerEmail = co.email || ""; payerBusinessId = co.businessId || "";
       const cust = state.customers.filter(c => c.sailingId === s.id && c.billTo === "company" && c.companyId === co.id).sort((a, b) => (a.name || "").localeCompare(b.name || ""));
-      let gross = isPartial ? price : cust.length * price;
-      if (isPartial) lines.push({title: `${s.name} — Osasuoritus`, qty: 1, unit: price, total: price, ratePct});
-      else for (const c of cust) lines.push({title: `${s.name} — ${INV_TYPE_LABELS[itype]} — ${c.name}`, qty: 1, unit: price, total: price, ratePct});
+      let gross;
+      if (isPartial) {
+        gross = price;
+        lines.push({title: `${s.name} — Osasuoritus`, qty: 1, unit: price, total: price, ratePct});
+      } else if (useFixed) {
+        gross = fixedPrice;
+        lines.push({title: `${s.name} — ${INV_TYPE_LABELS[itype]}`, qty: 1, unit: fixedPrice, total: fixedPrice, ratePct});
+      } else {
+        gross = cust.length * price;
+        for (const c of cust) lines.push({title: `${s.name} — ${INV_TYPE_LABELS[itype]} — ${c.name}`, qty: 1, unit: price, total: price, ratePct});
+      }
       const alreadyFee = (itype === "full") ? alreadyInvoicedReservationFee(state, s.id, payerName) : 0;
       if (alreadyFee > 0) {
         lines.push({title: "Aiemmin laskutettu varausmaksu", qty: 1, unit: -alreadyFee, total: -alreadyFee, ratePct});

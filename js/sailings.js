@@ -30,7 +30,7 @@ export function emptySailingDraft(date) {
     name: "", reitti: "", kansainvalinen: false,
     type: SAILING_TYPES[0], date: date || today(), endDate: "",
     startTime: "", endTime: "",
-    maxPersons: 6, reserveSlots: 2, pricePerPerson: 0, reservationFee: 0
+    maxPersons: 6, reserveSlots: 2, pricePerPerson: 0, reservationFee: 0, fixedPrice: 0
   };
 }
 
@@ -40,7 +40,8 @@ function draftFromSailing(s) {
     type: s.type || SAILING_TYPES[0], date: s.date || today(), endDate: s.endDate || "",
     startTime: s.startTime || "", endTime: s.endTime || "",
     maxPersons: Number(s.maxPersons ?? 6), reserveSlots: Number(s.reserveSlots ?? 2),
-    pricePerPerson: Number(s.pricePerPerson ?? 0), reservationFee: Number(s.reservationFee ?? 0)
+    pricePerPerson: Number(s.pricePerPerson ?? 0), reservationFee: Number(s.reservationFee ?? 0),
+    fixedPrice: Number(s.fixedPrice ?? 0)
   };
 }
 
@@ -146,7 +147,8 @@ registerAction("save-sailing", async ({store}) => {
     maxPersons: parseInt(d.maxPersons, 10) || 1,
     reserveSlots: Math.max(0, parseInt(d.reserveSlots, 10) || 0),
     pricePerPerson: parseFloat(d.pricePerPerson) || 0,
-    reservationFee: parseFloat(d.reservationFee) || 0
+    reservationFee: parseFloat(d.reservationFee) || 0,
+    fixedPrice: parseFloat(d.fixedPrice) || 0
   };
   if (state.editId) await fsSet("sailings", state.editId, data, store);
   else await fsAdd("sailings", data, store);
