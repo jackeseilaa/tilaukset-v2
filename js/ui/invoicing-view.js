@@ -63,7 +63,7 @@ export function renderInvoicingView(state) {
   const issuerInfo = ISSUERS[d.issuer || "tmi"] || ISSUERS.tmi;
   const invTitle = isCredit ? "HYVITYSLASKU" : itype === "reservation" ? "LASKU — VARAUSMAKSU" : itype === "partial" ? "LASKU — OSASUORITUS" : "LASKU — LOPPULASKU";
 
-  const sailOpts = state.sailings.slice().sort((a, b) => (a.date || "").localeCompare(b.date || "")).map(s => `<option value="${s.id}" ${s.id === d.sailingId ? "selected" : ""}>${esc(s.name)} (${fmtDate(s.date)})</option>`).join("");
+  const sailOpts = state.sailings.slice().sort((a, b) => (b.date || "").localeCompare(a.date || "")).map(s => `<option value="${s.id}" ${s.id === d.sailingId ? "selected" : ""}>${esc(s.type || "Purjehdus")} · ${fmtDate(s.date)} — ${esc(s.name)}</option>`).join("");
   const tutkintoOpts = state.tutkinnot.slice().sort((a, b) => (b.date || "").localeCompare(a.date || "")).map(t => `<option value="${t.id}" ${t.id === d.tutkintoId ? "selected" : ""}>${esc(t.type)}${t.boatType ? ` (${esc(t.boatType)})` : ""} — ${fmtDate(t.date)}</option>`).join("");
   const custOpts = state.customers.slice().sort((a, b) => (a.name || "").localeCompare(b.name || "")).map(c => `<option value="${c.id}" ${c.id === d.customerId ? "selected" : ""}>${esc(c.name)}</option>`).join("");
   const coOpts = state.companies.slice().sort((a, b) => (a.name || "").localeCompare(b.name || "")).map(co => `<option value="${co.id}" ${co.id === d.companyId ? "selected" : ""}>${esc(co.name)}</option>`).join("");
