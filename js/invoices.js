@@ -5,7 +5,7 @@ import {fsAdd, fsSet, fsDel} from "./db.js";
 import {today} from "./format.js";
 import {vatFromGross, resolveVatRate, VAT_RATES} from "./vat.js";
 import {isIntlSailing} from "./sailings.js";
-import {custIdentityKey} from "./customers.js";
+import {custNameKey} from "./customers.js";
 import {ISSUERS} from "./state.js";
 
 export const INV_TYPE_LABELS = {full: "Lasku", reservation: "Varausmaksu", partial: "Osasuoritus", credit: "Hyvityslasku"};
@@ -86,9 +86,18 @@ export function multiSelectedCustomers(state, draft) {
   const map = draft.multiCustomerIds || {};
   return Object.keys(map).filter(id => map[id]).map(id => state.customers.find(c => c.id === id)).filter(Boolean);
 }
-function multiSelectedSailings(state, draft) {
+export function multiSelectedSailings(state, draft) {
   const ids = new Set(multiSelectedCustomers(state, draft).map(c => c.sailingId).filter(Boolean));
   return state.sailings.filter(s => ids.has(s.id));
+}
+
+// Ehdotettu yhteissumma valittujen purjehdusten omien sovittujen hintojen
+// perusteella (kiinteä kokonaishinta jos asetettu, muuten hinta/hlö) —
+// käyttäjä voi ottaa tämän pohjaksi "Kiinteä kokonaishinta"-kenttään sen
+// sijaan että laskisi summan itse, mutta kenttä pysyy aina vapaasti muokattavana.
+export function multiSuggestedTotal(state, draft) {
+  return multiSelectedSailings(state, draft).reduce((sum, s) =>
+    sum + (Number(s.fixedPrice || 0) > 0 ? Number(s.fixedPrice) : Number(s.pricePerPerson || 0)), 0);
 }
 
 function alreadyInvoicedReservationFee(state, sailingId, payerName) {
@@ -188,7 +197,10 @@ function computeMultiBase(state, draft) {
     : sailingsSel.some(isIntlSailing) ? VAT_RATES.KANSAINVALINEN
     : (sailingsSel.length > 0 && sailingsSel.every(s => s.type === "Charter")) ? VAT_RATES.ALENNETTU
     : VAT_RATES.YLEINEN;
-  const primary = custs[0] || null;
+  // Ensisijaisesti maksajatiedot siltä osallistumistietueelta jolla on
+  // sähköposti (tai puhelin) — ei aina se ensin ruksittu, koska vanhoista
+  // osallistumisista osa voi olla tyhjiä yhteystiedoiltaan.
+  const primary = custs.find(c => c.email) || custs.find(c => c.phone) || custs[0] || null;
   const payerName = primary?.name || "", payerEmail = primary?.email || "";
   const eventName = sailingsSel.length
     ? `${sailingsSel.length} purjehdusta: ` + sailingsSel.map(s => `${s.name || "Purjehdus"} (${s.date || "?"})`).join(", ")
@@ -323,7 +335,7 @@ registerAction("edit-invoice", ({id, store}) => {
       mode: inv.mode || "customer",
       type: inv.itype || "full", invoiceDate: inv.invoiceDate || today(),
       customerId: isMulti ? "" : (inv.customerId || ""), companyId,
-      multiPersonKey: multiFirstCust ? custIdentityKey(multiFirstCust) : "", multiCustomerIds,
+      multiPersonKey: multiFirstCust ? custNameKey(multiFirstCust) : "", multiCustomerIds,
       partialAmount: (inv.itype === "partial" || inv.itype === "reservation" || isMulti) ? String(inv.grossTotal ?? "") : "",
       creditRefId: inv.creditRefId || "", note: inv.note || "", tuoteLines: {...(inv.tuoteLines || {})},
       vatRateOverride: inv.vatRateOverride || "", lineTextOverride: inv.lineTextOverride || "",
@@ -350,7 +362,7 @@ registerAction("new-credit-note", ({id, store}) => {
       tutkintoId: source === "tutkinto" ? (inv.eventId || "") : "",
       mode: inv.mode || "customer",
       type: "credit", invoiceDate: today(), customerId: inv.customerId || "", companyId: "",
-      multiPersonKey: multiFirstCust ? custIdentityKey(multiFirstCust) : "", multiCustomerIds,
+      multiPersonKey: multiFirstCust ? custNameKey(multiFirstCust) : "", multiCustomerIds,
       partialAmount: "", creditRefId: id, note: "", tuoteLines: {}, vatRateOverride: "", lineTextOverride: "",
       paymentDays: inv.paymentDays != null ? inv.paymentDays : ""
     }
@@ -381,9 +393,19 @@ registerAction("multi-person-changed", ({store}) => {
   const key = d.multiPersonKey || "";
   const map = {};
   for (const c of state.customers) {
-    if (c.sailingId && custIdentityKey(c) === key) map[c.id] = true;
+    if (c.sailingId && custNameKey(c) === key) map[c.id] = true;
   }
   store.setState({invoiceDraft: {...d, multiCustomerIds: map}});
+});
+
+// Täyttää "Kiinteä kokonaishinta" -kentän valittujen purjehdusten omien
+// sovittujen hintojen summalla (owner 2026-09-02: purjehduksella jo asetettu
+// kiinteä hinta ei muuten näy yhdistetyllä laskulla mitenkään, summa piti
+// laskea käsin). Käyttäjän aloitteesta, ei automaattinen — voi silti muokata.
+registerAction("apply-multi-suggested-total", ({store}) => {
+  const state = store.getState();
+  const d = state.invoiceDraft;
+  store.setState({invoiceDraft: {...d, partialAmount: String(multiSuggestedTotal(state, d))}});
 });
 
 registerAction("save-invoice", async ({store}) => {

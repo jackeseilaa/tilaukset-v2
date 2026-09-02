@@ -9,6 +9,15 @@ export function custIdentityKey(c) {
   return "n:" + (c.name || "").trim().toLowerCase();
 }
 
+// Pelkkä nimeen perustuva avain — käytetään yhdistetyn laskun henkilövalinnassa
+// custIdentityKeyn sijaan, koska sähköposti/puhelin puuttuu usein osasta
+// osallistumistietueista (varsinkin vanhoja) eikä silloin custIdentityKey
+// tunnistaisi samaa henkilöä eri purjehduksilla — nimi on se mihin käyttäjä
+// joka tapauksessa käytännössä luottaa.
+export function custNameKey(c) {
+  return (c.name || "").trim().toLowerCase();
+}
+
 export function custEventLabel(state, c) {
   if (c.sailingId) {
     const s = state.sailings.find(x => x.id === c.sailingId);
