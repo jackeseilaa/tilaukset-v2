@@ -76,8 +76,13 @@ export async function allocateInvoiceNumber() {
 }
 
 export function emptyInvoiceDraft(issuer) {
-  return {issuer: issuer || "tmi", source: "sailing", sailingId: "", tutkintoId: "", mode: "customer", type: "full", invoiceDate: today(), customerId: "", companyId: "", partialAmount: "", creditRefId: "", note: "", tuoteLines: {}, vatRateOverride: "", lineTextOverride: "", paymentDays: "", multiPersonKey: "", multiCustomerIds: {}};
+  return {issuer: issuer || "tmi", source: "sailing", sailingId: "", tutkintoId: "", mode: "customer", type: "full", invoiceDate: today(), customerId: "", companyId: "", partialAmount: "", creditRefId: "", note: "", tuoteLines: {}, vatRateOverride: "", lineTextOverride: "", paymentDays: "", multiPersonKey: "", multiCustomerIds: {}, vatZeroReason: ""};
 }
+
+// Arvonlisäverolaki edellyttää, että 0 %:n laskulla mainitaan peruste
+// verottomuudelle (esim. AVL 71 § kansainvälinen henkilökuljetus) — tämä on
+// sovelluksen ainoa reitti 0 %:iin, joten se kelpaa oletusehdotukseksi.
+export const DEFAULT_VAT_ZERO_REASON = "Kansainvälinen henkilökuljetus (AVL 71 §)";
 
 // Yhdistetyn laskun (useampi purjehdus, sama maksaja, kiinteä kokonaishinta)
 // valittujen purjehdusten ID:t, tapahtumasta riippumatta — käytetty sekä
@@ -339,6 +344,7 @@ registerAction("edit-invoice", ({id, store}) => {
       partialAmount: (inv.itype === "partial" || inv.itype === "reservation" || isMulti) ? String(inv.grossTotal ?? "") : "",
       creditRefId: inv.creditRefId || "", note: inv.note || "", tuoteLines: {...(inv.tuoteLines || {})},
       vatRateOverride: inv.vatRateOverride || "", lineTextOverride: inv.lineTextOverride || "",
+      vatZeroReason: inv.vatZeroReason || "",
       paymentDays: inv.paymentDays != null ? inv.paymentDays : ""
     }
   });
@@ -449,6 +455,7 @@ registerAction("save-invoice", async ({store}) => {
       : (source === "tutkinto" || d.mode === "customer" || d.mode === "customer-company") ? [d.customerId] : [],
     customerId: source === "multi" ? (inv.multiCustomerIds[0] || "") : (d.customerId || ""), note: (d.note || "").trim(),
     vatRateOverride: d.vatRateOverride || "", lineTextOverride: (d.lineTextOverride || "").trim(),
+    vatZeroReason: (inv.vatBreakdown || []).some(b => Number(b.ratePct) === 0) ? (d.vatZeroReason || "").trim() : "",
     paymentDays: effectivePaymentDays(state, d)
   };
   if (existing) await fsSet("invoices", editingId, rec, store);

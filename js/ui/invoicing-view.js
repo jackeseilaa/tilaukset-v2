@@ -1,6 +1,6 @@
 import {esc, fmtDate, addDays} from "../format.js";
 import {ISSUERS} from "../state.js";
-import {computeInvoice, INV_TYPE_LABELS, effectivePaymentDays, suggestedPaymentDays, multiSelectedCustomers, multiSuggestedTotal} from "../invoices.js";
+import {computeInvoice, INV_TYPE_LABELS, effectivePaymentDays, suggestedPaymentDays, multiSelectedCustomers, multiSuggestedTotal, DEFAULT_VAT_ZERO_REASON} from "../invoices.js";
 import {isIntlSailing} from "../sailings.js";
 import {custNameKey, custEventLabel, custEventDate} from "../customers.js";
 
@@ -105,6 +105,11 @@ export function renderInvoicingView(state) {
     : selS ? (isIntlSailing(selS) ? 0 : selS.type === "Charter" ? 13.5 : 25.5) : 25.5;
   const autoRateLabel = String(autoRate).replace(".", ",");
   const autoLineText = source === "multi" ? (inv.eventName || "esim. 3 purjehdusta, könttäsumma") : selS ? `${selS.name} — ${fmtDate(selS.date)}` : "esim. Charterpurjehdus, koko vene";
+  // ALV 0 % vaatii AVL:n mukaan perusteen näkymään laskulla (esim. "kansainvälinen
+  // henkilökuljetus, AVL 71 §") — tarkistetaan jokaisesta ALV-ryhmästä koska
+  // tuoterivi saattaa olla 0 % vaikka pääriveillä olisikin muu kanta.
+  const hasZeroVat = (inv.vatBreakdown || []).some(b => Number(b.ratePct) === 0);
+  const vatZeroReasonText = d.vatZeroReason || DEFAULT_VAT_ZERO_REASON;
   const pdVal = effectivePaymentDays(state, d);
   const suggPd = suggestedPaymentDays(state, d);
   const dueDate = d.invoiceDate ? (pdVal === 0 ? d.invoiceDate : addDays(d.invoiceDate, pdVal)) : "";
@@ -168,6 +173,9 @@ export function renderInvoicingView(state) {
         <input data-bind="invoiceDraft.lineTextOverride" value="${esc(d.lineTextOverride || autoLineText)}">
       </div>
     </div>` : ""}
+    ${(!isCredit && hasZeroVat) ? `<div class="field" style="margin-top:10px"><label class="lbl">Peruste ALV 0 %:lle <span style="font-weight:400;text-transform:none;font-size:11px;color:#6b7280">— arvonlisäverolaki edellyttää perusteen mainitsemista laskulla</span></label>
+      <input data-bind="invoiceDraft.vatZeroReason" value="${esc(d.vatZeroReason || DEFAULT_VAT_ZERO_REASON)}">
+    </div>` : ""}
     ${isCredit ? `<div class="field" style="margin-top:10px"><label class="lbl">Kohdistetaan laskulle</label><select data-bind="invoiceDraft.creditRefId"><option value="">-- valitse alkuperäinen lasku --</option>${creditRefOpts}</select>${inv.creditRef ? `<div class="infobox infobox-amber" style="margin-top:8px">Hyvitetään lasku ${esc(inv.creditRef.invoiceNo)} · ${Number(inv.creditRef.grossTotal || 0).toFixed(2)} €</div>` : ""}</div>` : ""}
     <div class="field" style="margin-top:10px"><label class="lbl">Huomautus laskulle</label><textarea data-bind="invoiceDraft.note" rows="2" placeholder="esim. Meriprojekti">${esc(d.note || "")}</textarea></div>
     <div class="row" style="margin:14px 0;flex-wrap:wrap;gap:10px">
@@ -197,6 +205,7 @@ export function renderInvoicingView(state) {
         : `<tr><td>ALV ${inv.vatBreakdown[0]?.ratePct ?? inv.ratePct}%</td><td class="r">${Number(inv.vat || 0).toFixed(2)} €</td></tr>`}
       <tr><td><strong>Yhteensä</strong></td><td class="r"><strong style="color:${isCredit ? "#991b1b" : "#0a4272"};font-size:18px">${Number(inv.grossTotal || 0).toFixed(2)} €</strong></td></tr>
     </table>
+    ${hasZeroVat ? `<div class="small muted" style="text-align:right;margin-top:4px">ALV 0 %: ${esc(vatZeroReasonText)}</div>` : ""}
     <div class="hr noPrint"></div>
     <div class="row noPrint"><button class="btn btn-primary" data-action="save-invoice">💾 Tallenna lasku</button></div>
   </div></div>

@@ -1,6 +1,7 @@
 import {esc, fmtDate, addDays} from "./format.js";
 import {ISSUERS} from "./state.js";
 import {registerAction} from "./dispatch.js";
+import {DEFAULT_VAT_ZERO_REASON} from "./invoices.js";
 
 // Suomalainen virtuaaliviivakoodi (pankkien mobiilisovellukset lukevat sen
 // suoraan maksuksi) — sama muoto kuin vanhassa sovelluksessa.
@@ -31,6 +32,16 @@ function vatRows(inv) {
     ? inv.vatBreakdown
     : [{ratePct: inv.vatRatePct ?? 25.5, vat: Number(inv.vat || 0)}];
   return bd.map(b => `<tr><td style="padding:2px 8px;color:#555">ALV ${b.ratePct}%</td><td style="padding:2px 8px;text-align:right">${Number(b.vat || 0).toFixed(2)} €</td></tr>`).join("");
+}
+
+// Arvonlisäverolaki edellyttää perusteen mainitsemista 0 %:n laskurivillä
+// (ks. js/invoices.js) — vanhoilla ennen tätä tallennetuilla laskuilla ei ole
+// vatZeroReason-kenttää, joten käytetään samaa oletustekstiä varmuuden vuoksi.
+function hasZeroVat(inv) {
+  const bd = Array.isArray(inv.vatBreakdown) && inv.vatBreakdown.length
+    ? inv.vatBreakdown
+    : [{ratePct: inv.vatRatePct ?? 25.5}];
+  return bd.some(b => Number(b.ratePct) === 0);
 }
 
 // Rakentaa tulostettavan laskun HTML:n rasterointia varten (html2canvas).
@@ -96,6 +107,7 @@ function buildInvoiceSheetHtml(inv) {
         <td style="padding:5px 8px;text-align:right;font-weight:700;font-size:15px;color:${isC ? "#b91c1c" : "#0a4272"};white-space:nowrap">${Math.abs(gross).toFixed(2)} €</td>
       </tr>
     </table>
+    ${hasZeroVat(inv) ? `<div style="text-align:right;font-size:9px;color:#666;margin-top:3px">ALV 0 %: ${esc(inv.vatZeroReason || DEFAULT_VAT_ZERO_REASON)}</div>` : ""}
     ${barcodeValue ? `
     <div style="border-top:1px solid #cbd5e1;margin:20px 0 12px"></div>
     <div style="font-size:8px;text-transform:uppercase;letter-spacing:.6px;color:#888;margin-bottom:8px">Maksutiedot</div>
