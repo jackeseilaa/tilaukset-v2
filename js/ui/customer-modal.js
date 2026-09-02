@@ -1,5 +1,6 @@
 import {esc, fmtDate} from "../format.js";
 import {TUTKINTO_TYPES} from "../state.js";
+import {custNameSuggestions} from "../customers.js";
 
 export function renderCustomerModal(state) {
   const editing = !!state.editId;
@@ -7,11 +8,12 @@ export function renderCustomerModal(state) {
   const selS = state.sailings.find(x => x.id === d.sailingId);
   const hasFee = selS && Number(selS.reservationFee || 0) > 0;
   const status = d.reservationStatus || "pending";
+  const nameOpts = custNameSuggestions(state).map(n => `<option value="${esc(n)}">`).join("");
   return `<div class="overlay"><div class="modal">
     <div class="modal-head"><div class="row-between"><div class="modal-title">${editing ? "Muokkaa asiakasta" : "Uusi asiakas"}</div><button class="btn btn-secondary btn-sm" data-action="close-modal">✕</button></div></div>
     <div class="modal-body">
       <div class="grid2">
-        <div class="field"><label class="lbl">Nimi *</label><input data-bind="customerDraft.name" value="${esc(d.name || "")}" autocomplete="off"></div>
+        <div class="field"><label class="lbl">Nimi * <span style="font-weight:400;text-transform:none;font-size:11px;color:#6b7280">— jos henkilö on jo rekisterissä, valitse ehdotuksista niin puhelin/sähköposti täyttyy automaattisesti</span></label><input data-bind="customerDraft.name" data-change-action="customer-name-picked" value="${esc(d.name || "")}" list="custNameList" autocomplete="off"><datalist id="custNameList">${nameOpts}</datalist></div>
         <div class="field"><label class="lbl">Puhelin</label><input data-bind="customerDraft.phone" value="${esc(d.phone || "")}"></div>
       </div>
       <div class="grid2">

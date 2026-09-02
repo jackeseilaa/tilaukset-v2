@@ -41,6 +41,14 @@ export function statusBadge(s) {
   return "";
 }
 
+// Nimikentän ehdotuslista (datalist) olemassa olevista asiakkaista — ilman
+// tätä sama henkilö saa helposti hieman eri kirjoitusasun nimestä uudelle
+// purjehdukselle lisättäessä, jolloin custIdentityKey ei enää tunnista
+// samaksi henkilöksi (esim. yhdistetty lasku ei löydä kaikkia purjehduksia).
+export function custNameSuggestions(state) {
+  return [...new Set(state.customers.map(c => (c.name || "").trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+}
+
 export function emptyCustomerDraft(sailingId, tutkintoId) {
   return {name: "", phone: "", email: "", sailingId: sailingId || "", tutkintoId: tutkintoId || "", tutkintoTypeOverride: "", billTo: "self", companyId: "", reservationStatus: "pending", laskutusosio: "", priceOverride: ""};
 }
@@ -89,6 +97,20 @@ registerAction("save-customer", async ({store}) => {
   if (state.editId) await fsSet("customers", state.editId, data, store);
   else await fsAdd("customers", data, store);
   store.setState({modal: null, editId: null, customerDraft: null});
+});
+
+// Kun nimi täsmää olemassa olevaan asiakkaaseen (datalist-ehdotus valittu tai
+// kirjoitettu käsin), täydennetään puhelin/sähköposti automaattisesti — mutta
+// vain jos ne ovat vielä tyhjät, ettei käsin muokattu tieto ylikirjoitu.
+registerAction("customer-name-picked", ({store}) => {
+  const state = store.getState();
+  const d = state.customerDraft;
+  if (!d || d.phone || d.email) return;
+  const name = (d.name || "").trim().toLowerCase();
+  if (!name) return;
+  const match = state.customers.find(c => (c.name || "").trim().toLowerCase() === name && (c.phone || c.email));
+  if (!match) return;
+  store.setState({customerDraft: {...d, phone: match.phone || d.phone, email: match.email || d.email}});
 });
 
 registerAction("delete-customer", async ({id, store}) => {
