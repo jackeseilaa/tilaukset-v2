@@ -5,6 +5,7 @@ import {fsAdd, fsSet, fsDel} from "./db.js";
 import {today} from "./format.js";
 import {vatFromGross, resolveVatRate, VAT_RATES} from "./vat.js";
 import {isIntlSailing} from "./sailings.js";
+import {custIdentityKey} from "./customers.js";
 import {ISSUERS} from "./state.js";
 
 export const INV_TYPE_LABELS = {full: "Lasku", reservation: "Varausmaksu", partial: "Osasuoritus", credit: "Hyvityslasku"};
@@ -14,9 +15,11 @@ export const INV_TYPE_LABELS = {full: "Lasku", reservation: "Varausmaksu", parti
 // alle kuukausi -> 7 vrk, muuten 14 vrk. Ei tapahtumaa valittu -> 7 vrk.
 export function suggestedPaymentDays(state, draft) {
   const base = draft.invoiceDate || today();
-  const eventDate = (draft.source || "sailing") === "tutkinto"
-    ? (state.tutkinnot.find(t => t.id === draft.tutkintoId)?.date || "")
-    : (state.sailings.find(s => s.id === draft.sailingId)?.date || "");
+  const source = draft.source || "sailing";
+  let eventDate = "";
+  if (source === "tutkinto") eventDate = state.tutkinnot.find(t => t.id === draft.tutkintoId)?.date || "";
+  else if (source === "multi") eventDate = multiSelectedSailings(state, draft).map(s => s.date || "").sort()[0] || "";
+  else eventDate = state.sailings.find(s => s.id === draft.sailingId)?.date || "";
   if (!eventDate) return 7;
   const days = Math.round((new Date(eventDate + "T12:00:00") - new Date(base + "T12:00:00")) / 86400000);
   if (days < 7) return 3;
@@ -73,7 +76,19 @@ export async function allocateInvoiceNumber() {
 }
 
 export function emptyInvoiceDraft(issuer) {
-  return {issuer: issuer || "tmi", source: "sailing", sailingId: "", tutkintoId: "", mode: "customer", type: "full", invoiceDate: today(), customerId: "", companyId: "", partialAmount: "", creditRefId: "", note: "", tuoteLines: {}, vatRateOverride: "", lineTextOverride: "", paymentDays: ""};
+  return {issuer: issuer || "tmi", source: "sailing", sailingId: "", tutkintoId: "", mode: "customer", type: "full", invoiceDate: today(), customerId: "", companyId: "", partialAmount: "", creditRefId: "", note: "", tuoteLines: {}, vatRateOverride: "", lineTextOverride: "", paymentDays: "", multiPersonKey: "", multiCustomerIds: {}};
+}
+
+// Yhdistetyn laskun (useampi purjehdus, sama maksaja, kiinteä kokonaishinta)
+// valittujen purjehdusten ID:t, tapahtumasta riippumatta — käytetty sekä
+// laskun laskennassa että maksuehtoehdotuksessa.
+export function multiSelectedCustomers(state, draft) {
+  const map = draft.multiCustomerIds || {};
+  return Object.keys(map).filter(id => map[id]).map(id => state.customers.find(c => c.id === id)).filter(Boolean);
+}
+function multiSelectedSailings(state, draft) {
+  const ids = new Set(multiSelectedCustomers(state, draft).map(c => c.sailingId).filter(Boolean));
+  return state.sailings.filter(s => ids.has(s.id));
 }
 
 function alreadyInvoicedReservationFee(state, sailingId, payerName) {
@@ -157,6 +172,36 @@ function computeSailingBase(state, draft, {itype, isPartial, isReservation}) {
   return {sailing: s, ratePct, payerName, payerEmail, payerBusinessId, lines, grossTotal, eventName};
 }
 
+// Yhdistetty lasku: sama asiakas, useampi eri purjehdus samalle laskulle,
+// yhtenä kiinteänä kokonaishintana (owner 2026-09-02: esim. 3 erillistä
+// charter-purjehdusta samalle asiakkaalle, ei laskuteta hlö-hinnalla erikseen).
+// Ei tue yritys-/provisiomallia (asiakkaan oma yhdistelmälasku) eikä
+// varausmaksu-/aiemmin-laskutettu-vähennystä — summa on aina käyttäjän
+// syöttämä (partialAmount-kenttää käytetään uudelleen "kiinteä kokonaishinta"
+// -syötteenä myös loppulaskutyypille).
+function computeMultiBase(state, draft) {
+  const custs = multiSelectedCustomers(state, draft);
+  const sailingsSel = multiSelectedSailings(state, draft).sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+  const lineText = (draft.lineTextOverride || "").trim();
+  const ratePct = (draft.vatRateOverride != null && draft.vatRateOverride !== "")
+    ? Number(draft.vatRateOverride)
+    : sailingsSel.some(isIntlSailing) ? VAT_RATES.KANSAINVALINEN
+    : (sailingsSel.length > 0 && sailingsSel.every(s => s.type === "Charter")) ? VAT_RATES.ALENNETTU
+    : VAT_RATES.YLEINEN;
+  const primary = custs[0] || null;
+  const payerName = primary?.name || "", payerEmail = primary?.email || "";
+  const eventName = sailingsSel.length
+    ? `${sailingsSel.length} purjehdusta: ` + sailingsSel.map(s => `${s.name || "Purjehdus"} (${s.date || "?"})`).join(", ")
+    : "";
+  let lines = [], grossTotal = 0;
+  if (custs.length > 0) {
+    const total = parseFloat(draft.partialAmount || 0) || 0;
+    lines.push({title: lineText || eventName || "Yhdistetty lasku", qty: 1, unit: total, total, ratePct});
+    grossTotal = total;
+  }
+  return {sailing: null, ratePct, payerName, payerEmail, payerBusinessId: "", lines, grossTotal, eventName, multiCustomerIds: custs.map(c => c.id)};
+}
+
 // Tutkintopohjainen lasku on aina yhdelle asiakkaalle (ei yritys-/provisiomallia,
 // samoin kuin vanhassa sovelluksessa) ja aina yleisellä ALV-kannalla — tutkinnoilla
 // ei ole charter-/kansainvälisyyskonseptia kuten purjehduksilla.
@@ -214,9 +259,12 @@ export function computeInvoice(state, draft) {
 
   const base = source === "tutkinto"
     ? computeTutkintoBase(state, draft, {itype, isPartial, isReservation})
+    : source === "multi"
+    ? computeMultiBase(state, draft)
     : computeSailingBase(state, draft, {itype, isPartial, isReservation});
   let {payerName, payerEmail, payerBusinessId, lines, grossTotal, ratePct, eventName} = base;
   const sailing = base.sailing || null, tutkinto = base.tutkinto || null;
+  const multiCustomerIds = base.multiCustomerIds || [];
 
   if (isCredit) {
     lines = []; grossTotal = 0;
@@ -246,7 +294,7 @@ export function computeInvoice(state, draft) {
   const {net, vat, breakdown} = vatBreakdown(lines, ratePct);
   const invNoPreview = previewNextInvoiceNumber(state);
   const reference = finnishReference(invNoPreview.replace(/\D/g, ""));
-  return {sailing, tutkinto, source, ratePct, payerName, payerEmail, payerBusinessId, lines, grossTotal, net, vat, vatBreakdown: breakdown, reference, invNoPreview, eventName, itype, isCredit, isPartial, isReservation, creditRef};
+  return {sailing, tutkinto, source, ratePct, payerName, payerEmail, payerBusinessId, lines, grossTotal, net, vat, vatBreakdown: breakdown, reference, invNoPreview, eventName, itype, isCredit, isPartial, isReservation, creditRef, multiCustomerIds};
 }
 
 registerAction("new-invoice", ({store}) => {
@@ -261,6 +309,10 @@ registerAction("edit-invoice", ({id, store}) => {
   const companyId = (inv.mode === "company" || inv.mode === "customer-company")
     ? (state.companies.find(co => co.name === inv.payerName)?.id || "") : "";
   const source = inv.source || "sailing";
+  const isMulti = source === "multi";
+  const multiCustomerIds = {};
+  if (isMulti) for (const cid of inv.coveredCustomerIds || []) multiCustomerIds[cid] = true;
+  const multiFirstCust = isMulti ? state.customers.find(c => c.id === (inv.coveredCustomerIds || [])[0]) : null;
   store.setState({
     tab: "invoicing",
     editInvoiceId: id,
@@ -270,8 +322,9 @@ registerAction("edit-invoice", ({id, store}) => {
       tutkintoId: source === "tutkinto" ? (inv.eventId || "") : "",
       mode: inv.mode || "customer",
       type: inv.itype || "full", invoiceDate: inv.invoiceDate || today(),
-      customerId: inv.customerId || "", companyId,
-      partialAmount: (inv.itype === "partial" || inv.itype === "reservation") ? String(inv.grossTotal ?? "") : "",
+      customerId: isMulti ? "" : (inv.customerId || ""), companyId,
+      multiPersonKey: multiFirstCust ? custIdentityKey(multiFirstCust) : "", multiCustomerIds,
+      partialAmount: (inv.itype === "partial" || inv.itype === "reservation" || isMulti) ? String(inv.grossTotal ?? "") : "",
       creditRefId: inv.creditRefId || "", note: inv.note || "", tuoteLines: {...(inv.tuoteLines || {})},
       vatRateOverride: inv.vatRateOverride || "", lineTextOverride: inv.lineTextOverride || "",
       paymentDays: inv.paymentDays != null ? inv.paymentDays : ""
@@ -284,6 +337,10 @@ registerAction("new-credit-note", ({id, store}) => {
   const inv = state.invoices.find(x => x.id === id);
   if (!inv) return;
   const source = inv.source || "sailing";
+  const isMulti = source === "multi";
+  const multiCustomerIds = {};
+  if (isMulti) for (const cid of inv.coveredCustomerIds || []) multiCustomerIds[cid] = true;
+  const multiFirstCust = isMulti ? state.customers.find(c => c.id === (inv.coveredCustomerIds || [])[0]) : null;
   store.setState({
     tab: "invoicing",
     editInvoiceId: null,
@@ -293,6 +350,7 @@ registerAction("new-credit-note", ({id, store}) => {
       tutkintoId: source === "tutkinto" ? (inv.eventId || "") : "",
       mode: inv.mode || "customer",
       type: "credit", invoiceDate: today(), customerId: inv.customerId || "", companyId: "",
+      multiPersonKey: multiFirstCust ? custIdentityKey(multiFirstCust) : "", multiCustomerIds,
       partialAmount: "", creditRefId: id, note: "", tuoteLines: {}, vatRateOverride: "", lineTextOverride: "",
       paymentDays: inv.paymentDays != null ? inv.paymentDays : ""
     }
@@ -304,14 +362,28 @@ registerAction("cancel-edit-invoice", ({store}) => {
   store.setState({editInvoiceId: null, invoiceDraft: emptyInvoiceDraft(state.invoiceDraft?.issuer)});
 });
 
-// Tutkintopohjaisella laskulla ei ole yritys-/provisiomallia — vaihto
-// tutkintoon palauttaa asiakaskohtaiseen malliin, ettei jäädä kiinni
-// yrityslaskun kenttiin joita tutkinnolle ei näytetä.
+// Tutkintopohjaisella eikä yhdistetyllä laskulla ole yritys-/provisiomallia —
+// vaihto jompaankumpaan palauttaa asiakaskohtaiseen malliin, ettei jäädä
+// kiinni yrityslaskun kenttiin joita niille ei näytetä.
 registerAction("invoice-source-changed", ({store}) => {
   const d = store.getState().invoiceDraft;
-  if (d.source === "tutkinto" && d.mode !== "customer") {
+  if ((d.source === "tutkinto" || d.source === "multi") && d.mode !== "customer") {
     store.setState({invoiceDraft: {...d, mode: "customer", companyId: ""}});
   }
+});
+
+// Yhdistetyn laskun asiakasvalinta: kun käyttäjä valitsee henkilön, oletuksena
+// merkitään kaikki hänen purjehduksensa mukaan laskulle (voi sitten poistaa
+// valinnan yksittäisiltä purjehduksilta).
+registerAction("multi-person-changed", ({store}) => {
+  const state = store.getState();
+  const d = state.invoiceDraft;
+  const key = d.multiPersonKey || "";
+  const map = {};
+  for (const c of state.customers) {
+    if (c.sailingId && custIdentityKey(c) === key) map[c.id] = true;
+  }
+  store.setState({invoiceDraft: {...d, multiCustomerIds: map}});
 });
 
 registerAction("save-invoice", async ({store}) => {
@@ -321,11 +393,13 @@ registerAction("save-invoice", async ({store}) => {
   const inv = computeInvoice(state, d);
   if (!inv.isCredit && source === "sailing" && !inv.sailing) { alert("Valitse purjehdus."); return; }
   if (!inv.isCredit && source === "tutkinto" && !inv.tutkinto) { alert("Valitse tutkinto."); return; }
+  if (!inv.isCredit && source === "multi" && inv.multiCustomerIds.length === 0) { alert("Valitse asiakas ja vähintään yksi purjehdus."); return; }
   if (source === "sailing" && d.mode === "company" && !d.companyId) { alert("Valitse yritys."); return; }
   if (!inv.payerName) { alert("Valitse asiakas."); return; }
   if (inv.lines.length === 0) { alert("Laskulla ei ole rivejä."); return; }
   if (inv.isCredit && !d.creditRefId) { alert("Valitse hyvitettävä lasku."); return; }
   if (inv.isPartial && !parseFloat(d.partialAmount || 0)) { alert("Syötä osasuorituksen summa."); return; }
+  if (!inv.isCredit && source === "multi" && !parseFloat(d.partialAmount || 0)) { alert("Syötä kiinteä kokonaishinta."); return; }
 
   const editingId = state.editInvoiceId;
   const existing = editingId ? state.invoices.find(x => x.id === editingId) : null;
@@ -345,12 +419,13 @@ registerAction("save-invoice", async ({store}) => {
     creditRefId: d.creditRefId || "", creditRefNo: inv.creditRef?.invoiceNo || "",
     invoiceNo, invoiceDate: d.invoiceDate || today(), reference,
     payerName: inv.payerName, payerBusinessId: inv.payerBusinessId || "", payerEmail: inv.payerEmail || "",
-    eventId: (source === "tutkinto" ? inv.tutkinto?.id : inv.sailing?.id) || "", eventName: inv.eventName,
+    eventId: (source === "tutkinto" ? inv.tutkinto?.id : source === "multi" ? "" : inv.sailing?.id) || "", eventName: inv.eventName,
     vatRatePct: inv.ratePct, net: Number(inv.net || 0), vat: Number(inv.vat || 0), grossTotal: Number(inv.grossTotal || 0),
     vatBreakdown: inv.vatBreakdown, tuoteLines,
     lines: inv.lines, paid: existing?.paid || false, paidDate: existing?.paidDate || "",
-    coveredCustomerIds: (source === "tutkinto" || d.mode === "customer" || d.mode === "customer-company") ? [d.customerId] : [],
-    customerId: d.customerId || "", note: (d.note || "").trim(),
+    coveredCustomerIds: source === "multi" ? inv.multiCustomerIds
+      : (source === "tutkinto" || d.mode === "customer" || d.mode === "customer-company") ? [d.customerId] : [],
+    customerId: source === "multi" ? (inv.multiCustomerIds[0] || "") : (d.customerId || ""), note: (d.note || "").trim(),
     vatRateOverride: d.vatRateOverride || "", lineTextOverride: (d.lineTextOverride || "").trim(),
     paymentDays: effectivePaymentDays(state, d)
   };

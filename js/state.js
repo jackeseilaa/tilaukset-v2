@@ -47,7 +47,7 @@ export const initialState = {
 
   // Laskutus
   editInvoiceId: null,
-  invoiceDraft: {issuer: "tmi", source: "sailing", sailingId: "", tutkintoId: "", mode: "customer", type: "full", invoiceDate: today(), customerId: "", companyId: "", partialAmount: "", creditRefId: "", note: "", tuoteLines: {}},
+  invoiceDraft: {issuer: "tmi", source: "sailing", sailingId: "", tutkintoId: "", mode: "customer", type: "full", invoiceDate: today(), customerId: "", companyId: "", partialAmount: "", creditRefId: "", note: "", tuoteLines: {}, multiPersonKey: "", multiCustomerIds: {}},
   registerMonth: today().slice(0, 7),
   registerIssuerFilter: "all",
 

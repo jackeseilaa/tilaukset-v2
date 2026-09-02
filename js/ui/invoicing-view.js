@@ -1,7 +1,8 @@
 import {esc, fmtDate, addDays} from "../format.js";
 import {ISSUERS} from "../state.js";
-import {computeInvoice, INV_TYPE_LABELS, effectivePaymentDays, suggestedPaymentDays} from "../invoices.js";
+import {computeInvoice, INV_TYPE_LABELS, effectivePaymentDays, suggestedPaymentDays, multiSelectedCustomers} from "../invoices.js";
 import {isIntlSailing} from "../sailings.js";
+import {custIdentityKey} from "../customers.js";
 
 function invTypeBadge(t) {
   if (t === "reservation") return `<span class="badge badge-blue" style="font-size:10px">Varausmaksu</span>`;
@@ -37,6 +38,37 @@ function renderRegister(state) {
   </div>`;
 }
 
+// Yhdistetyn laskun asiakas-/purjehdusvalitsin: ensin henkilö (nimen mukaan,
+// koostettu kaikista hänen purjehdusosallistumisistaan), sitten ruksit sille
+// mitkä osallistumiset (= purjehdukset) tälle laskulle kootaan.
+function renderMultiPicker(state, d) {
+  const persons = new Map();
+  for (const c of state.customers) {
+    if (!c.sailingId) continue;
+    const key = custIdentityKey(c);
+    if (!persons.has(key)) persons.set(key, c.name || "(nimetön)");
+  }
+  const personOpts = [...persons.entries()].sort((a, b) => a[1].localeCompare(b[1]))
+    .map(([key, name]) => `<option value="${esc(key)}" ${key === (d.multiPersonKey || "") ? "selected" : ""}>${esc(name)}</option>`).join("");
+  const key = d.multiPersonKey || "";
+  const map = d.multiCustomerIds || {};
+  const rows = key ? state.customers.filter(c => c.sailingId && custIdentityKey(c) === key)
+    .map(c => ({c, s: state.sailings.find(x => x.id === c.sailingId)}))
+    .filter(x => x.s)
+    .sort((a, b) => (a.s.date || "").localeCompare(b.s.date || "")) : [];
+  return `<div class="field" style="margin-top:10px">
+    <label class="lbl">Asiakas *</label>
+    <select data-bind="invoiceDraft.multiPersonKey" data-change-action="multi-person-changed"><option value="">-- valitse --</option>${personOpts}</select>
+  </div>
+  ${key ? `<div class="field" style="margin-top:10px">
+    <label class="lbl">Yhdistettävät purjehdukset *</label>
+    ${rows.length === 0 ? `<div class="small muted">Ei purjehduksia tälle asiakkaalle.</div>` : rows.map(({c, s}) => `<label class="row" style="gap:6px;align-items:center;margin-bottom:4px">
+      <input type="checkbox" data-bind="invoiceDraft.multiCustomerIds.${c.id}" ${map[c.id] ? "checked" : ""}>
+      <span>${esc(s.type || "Purjehdus")} · ${fmtDate(s.date)} — ${esc(s.name)}</span>
+    </label>`).join("")}
+  </div>` : ""}`;
+}
+
 function renderTuotePicker(state, d) {
   const products = state.muutTuotteet.slice().sort((a, b) => (a.nimi || "").localeCompare(b.nimi || ""));
   if (products.length === 0) return "";
@@ -63,9 +95,12 @@ export function renderInvoicingView(state) {
   const inv = computeInvoice(state, d);
   const issuerInfo = ISSUERS[d.issuer || "tmi"] || ISSUERS.tmi;
   const invTitle = isCredit ? "HYVITYSLASKU" : itype === "reservation" ? "LASKU — VARAUSMAKSU" : itype === "partial" ? "LASKU — OSASUORITUS" : "LASKU — LOPPULASKU";
-  const autoRate = source === "tutkinto" ? 25.5 : selS ? (isIntlSailing(selS) ? 0 : selS.type === "Charter" ? 13.5 : 25.5) : 25.5;
+  const multiSailingsSel = source === "multi" ? multiSelectedCustomers(state, d).map(c => state.sailings.find(s => s.id === c.sailingId)).filter(Boolean) : [];
+  const autoRate = source === "tutkinto" ? 25.5
+    : source === "multi" ? (multiSailingsSel.some(isIntlSailing) ? 0 : (multiSailingsSel.length > 0 && multiSailingsSel.every(s => s.type === "Charter")) ? 13.5 : 25.5)
+    : selS ? (isIntlSailing(selS) ? 0 : selS.type === "Charter" ? 13.5 : 25.5) : 25.5;
   const autoRateLabel = String(autoRate).replace(".", ",");
-  const autoLineText = selS ? `${selS.name} — ${fmtDate(selS.date)}` : "esim. Charterpurjehdus, koko vene";
+  const autoLineText = source === "multi" ? (inv.eventName || "esim. 3 purjehdusta, könttäsumma") : selS ? `${selS.name} — ${fmtDate(selS.date)}` : "esim. Charterpurjehdus, koko vene";
   const pdVal = effectivePaymentDays(state, d);
   const suggPd = suggestedPaymentDays(state, d);
   const dueDate = d.invoiceDate ? (pdVal === 0 ? d.invoiceDate : addDays(d.invoiceDate, pdVal)) : "";
@@ -81,23 +116,24 @@ export function renderInvoicingView(state) {
 
   return `<div class="card noPrint">
     <div class="card-title">🧾 Laskutus</div>
-    <div class="card-sub">${editing ? `Muokkaat laskua <strong>${esc(state.invoices.find(x => x.id === state.editInvoiceId)?.invoiceNo || "")}</strong>` : "Luo lasku purjehdukselle tai tutkinnolle"}</div>
+    <div class="card-sub">${editing ? `Muokkaat laskua <strong>${esc(state.invoices.find(x => x.id === state.editInvoiceId)?.invoiceNo || "")}</strong>` : "Luo lasku purjehdukselle, tutkinnolle tai usealle purjehdukselle yhdistettynä"}</div>
     ${editing ? `<div class="infobox infobox-amber" style="margin-bottom:12px">✎ Muokkaustila — laskunumero säilyy · <button class="btn btn-secondary btn-sm" data-action="cancel-edit-invoice" style="margin-left:8px">✕ Peruuta</button></div>` : ""}
     <div class="hr"></div>
     <div class="grid3" style="margin-bottom:14px">
       <div class="field"><label class="lbl">Laskuttaja</label><select data-bind="invoiceDraft.issuer"><option value="tmi" ${(d.issuer || "tmi") === "tmi" ? "selected" : ""}>J Sailing Tmi</option><option value="oy" ${d.issuer === "oy" ? "selected" : ""}>AJarmo Oy</option></select></div>
-      <div class="field"><label class="lbl">Laskutettava</label><select data-bind="invoiceDraft.source" data-change-action="invoice-source-changed" ${isCredit ? "disabled" : ""}><option value="sailing" ${source === "sailing" ? "selected" : ""}>⛵ Purjehdus / Kurssi</option><option value="tutkinto" ${source === "tutkinto" ? "selected" : ""}>🎓 Tutkinto</option></select></div>
+      <div class="field"><label class="lbl">Laskutettava</label><select data-bind="invoiceDraft.source" data-change-action="invoice-source-changed" ${isCredit ? "disabled" : ""}><option value="sailing" ${source === "sailing" ? "selected" : ""}>⛵ Purjehdus / Kurssi</option><option value="tutkinto" ${source === "tutkinto" ? "selected" : ""}>🎓 Tutkinto</option><option value="multi" ${source === "multi" ? "selected" : ""}>🧺 Yhdistetty lasku (useampi purjehdus)</option></select></div>
       <div class="field"><label class="lbl">Laskulaji</label><select data-bind="invoiceDraft.type"><option value="full" ${itype === "full" ? "selected" : ""}>Loppulasku</option><option value="reservation" ${itype === "reservation" ? "selected" : ""}>Varausmaksu</option><option value="partial" ${itype === "partial" ? "selected" : ""}>Osasuoritus</option><option value="credit" ${itype === "credit" ? "selected" : ""}>Hyvityslasku</option></select></div>
     </div>
     ${source === "sailing" ? `<div class="field"><label class="lbl">Malli</label><select data-bind="invoiceDraft.mode"><option value="customer" ${d.mode === "customer" ? "selected" : ""}>Asiakaskohtainen</option><option value="customer-company" ${d.mode === "customer-company" ? "selected" : ""}>Asiakaskohtainen — yritys maksaa</option><option value="company" ${d.mode === "company" ? "selected" : ""}>Yrityslasku</option></select></div>` : ""}
     ${!isCredit ? (source === "tutkinto"
       ? `<div class="field" style="margin-top:10px"><label class="lbl">Tutkinto *</label><select data-bind="invoiceDraft.tutkintoId"><option value="">-- valitse --</option>${tutkintoOpts}</select></div>`
+      : source === "multi" ? renderMultiPicker(state, d)
       : `<div class="field" style="margin-top:10px"><label class="lbl">Tapahtuma *</label><select data-bind="invoiceDraft.sailingId"><option value="">-- valitse --</option>${sailOpts}</select></div>`) : ""}
     <div class="grid2" style="margin-top:10px">
       <div class="field"><label class="lbl">Laskun päivä</label><input type="date" data-bind="invoiceDraft.invoiceDate" value="${esc(d.invoiceDate || "")}"></div>
       ${!isCredit ? `<div class="field"><label class="lbl">Maksuehto</label><select data-bind="invoiceDraft.paymentDays">${pdOptions}</select><div class="small muted" style="margin-top:4px">Eräpäivä: <strong>${dueDate ? fmtDate(dueDate) : "—"}</strong> · ehdotus tapahtuman ajankohdan mukaan: ${suggPd === 0 ? "heti" : suggPd + " vrk"}</div></div>` : ""}
     </div>
-    ${(isPartial || (isReservation && !hasFee)) ? `<div class="field" style="margin-top:10px"><label class="lbl">${isReservation ? "Varausmaksun summa (€ brutto)" : "Osasuorituksen summa (€ brutto)"}</label><input type="text" inputmode="decimal" data-bind="invoiceDraft.partialAmount" value="${esc(String(d.partialAmount || ""))}" placeholder="esim. 150.00"></div>` : ""}
+    ${(isPartial || (isReservation && !hasFee) || source === "multi") ? `<div class="field" style="margin-top:10px"><label class="lbl">${source === "multi" ? "Kiinteä kokonaishinta (€ brutto)" : isReservation ? "Varausmaksun summa (€ brutto)" : "Osasuorituksen summa (€ brutto)"}</label><input type="text" inputmode="decimal" data-bind="invoiceDraft.partialAmount" value="${esc(String(d.partialAmount || ""))}" placeholder="esim. 1500.00"></div>` : ""}
     ${!isCredit ? `<div class="grid2" style="margin-top:10px">
       <div class="field"><label class="lbl">ALV-kanta</label>
         <select data-bind="invoiceDraft.vatRateOverride">
@@ -114,7 +150,7 @@ export function renderInvoicingView(state) {
     ${isCredit ? `<div class="field" style="margin-top:10px"><label class="lbl">Kohdistetaan laskulle</label><select data-bind="invoiceDraft.creditRefId"><option value="">-- valitse alkuperäinen lasku --</option>${creditRefOpts}</select>${inv.creditRef ? `<div class="infobox infobox-amber" style="margin-top:8px">Hyvitetään lasku ${esc(inv.creditRef.invoiceNo)} · ${Number(inv.creditRef.grossTotal || 0).toFixed(2)} €</div>` : ""}</div>` : ""}
     <div class="field" style="margin-top:10px"><label class="lbl">Huomautus laskulle</label><textarea data-bind="invoiceDraft.note" rows="2" placeholder="esim. Meriprojekti">${esc(d.note || "")}</textarea></div>
     <div class="row" style="margin:14px 0;flex-wrap:wrap;gap:10px">
-      <div style="flex:1;min-width:200px" class="field"><label class="lbl">Asiakas</label><select data-bind="invoiceDraft.customerId"><option value="">-- valitse --</option>${custOpts}</select></div>
+      ${source !== "multi" ? `<div style="flex:1;min-width:200px" class="field"><label class="lbl">Asiakas</label><select data-bind="invoiceDraft.customerId"><option value="">-- valitse --</option>${custOpts}</select></div>` : ""}
       ${(source === "sailing" && (d.mode === "company" || d.mode === "customer-company")) ? `<div style="flex:1;min-width:200px" class="field"><label class="lbl">Yritys</label><select data-bind="invoiceDraft.companyId"><option value="">-- valitse --</option>${coOpts}</select></div>` : ""}
       <div style="min-width:160px" class="field"><label class="lbl">Laskunro (seuraava)</label><div style="padding:10px 13px;border:1.5px solid #d1d5db;border-radius:8px;background:#f0f4f8;font-weight:800;color:#0a4272;font-size:15px">${esc(inv.invNoPreview)}</div><div class="small muted" style="margin-top:4px">Viite: ${esc(inv.reference)}</div></div>
     </div>
