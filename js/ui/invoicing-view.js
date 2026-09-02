@@ -164,8 +164,8 @@ export function renderInvoicingView(state) {
           <option value="0" ${d.vatRateOverride === "0" ? "selected" : ""}>0 % (kansainvälinen / veroton)</option>
         </select>
       </div>
-      <div class="field"><label class="lbl">Laskurivin teksti <span style="font-weight:400;text-transform:none;font-size:11px;color:#6b7280">— tyhjä = automaattinen</span></label>
-        <input data-bind="invoiceDraft.lineTextOverride" value="${esc(d.lineTextOverride || "")}" placeholder="${esc(autoLineText)}">
+      <div class="field"><label class="lbl">Kuvaus laskulla <span style="font-weight:400;text-transform:none;font-size:11px;color:#6b7280">— tämä näkyy asiakkaalle laskurivillä, muokattavissa vapaasti</span></label>
+        <input data-bind="invoiceDraft.lineTextOverride" value="${esc(d.lineTextOverride || autoLineText)}">
       </div>
     </div>` : ""}
     ${isCredit ? `<div class="field" style="margin-top:10px"><label class="lbl">Kohdistetaan laskulle</label><select data-bind="invoiceDraft.creditRefId"><option value="">-- valitse alkuperäinen lasku --</option>${creditRefOpts}</select>${inv.creditRef ? `<div class="infobox infobox-amber" style="margin-top:8px">Hyvitetään lasku ${esc(inv.creditRef.invoiceNo)} · ${Number(inv.creditRef.grossTotal || 0).toFixed(2)} €</div>` : ""}</div>` : ""}
