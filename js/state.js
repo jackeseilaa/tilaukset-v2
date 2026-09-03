@@ -57,8 +57,9 @@ export const initialState = {
   registerMonth: today().slice(0, 7),
   registerIssuerFilter: "all",
 
-  // Kirjanpito-välilehden vuosisuodatin ("" = uusin vuosi datassa, "all" = kaikki)
+  // Kirjanpito-välilehden suodattimet ("" = uusin vuosi / koko vuoden yhteenveto)
   kirjanpitoYear: "",
+  kirjanpitoMonth: "",
 
   // Tutkinnot (modal==="tutkinto")
   tutkintoDraft: null,

@@ -22,7 +22,7 @@ import {renderTutkinnotView} from "./tutkinnot-view.js";
 import {renderTutkintoModal} from "./tutkinto-modal.js";
 import {renderAdminView} from "./admin-view.js";
 
-export const APP_VERSION = "V1.11.0";
+export const APP_VERSION = "V1.11.1";
 
 registerAction("set-tab", ({el, store}) => { store.setState({tab: el.dataset.tab}); });
 registerAction("close-modal", ({store}) => { store.setState({modal: null, editId: null}); });
