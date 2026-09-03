@@ -77,6 +77,19 @@ export function initDispatch(rootEl, store) {
     await handler({el, file: el.files[0], store});
     el.value = "";
   });
+
+  // Päivämäärä-/arvokentät jotka laukaisevat toiminnon vasta kun arvo on
+  // valmis (change, ei jokainen näppäin) — esim. laskun maksupäivän muokkaus
+  // suoraan laskurivillä. Erillinen data-date-actionista koska data-action
+  // laukeaisi jo kentän klikkauksesta.
+  rootEl.addEventListener("change", async (e) => {
+    const el = e.target.closest("[data-date-action]");
+    if (!el) return;
+    const handler = actions.get(el.dataset.dateAction);
+    if (!handler) return;
+    try { await handler({...readCtx(el), value: el.value, e, store}); }
+    catch (err) { console.error(`Toiminto "${el.dataset.dateAction}" epäonnistui:`, err); }
+  });
 }
 
 function setPath(obj, path, value) {

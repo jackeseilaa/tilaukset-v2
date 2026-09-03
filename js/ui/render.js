@@ -16,12 +16,13 @@ import {renderInvoicingView} from "./invoicing-view.js";
 import {renderMuutTuotteetView} from "./muuttuotteet-view.js";
 import {renderReskontraView} from "./reskontra-view.js";
 import {renderTasmaytysView} from "./tasmaytys-view.js";
+import {renderKirjanpitoView} from "./kirjanpito-view.js";
 import {renderKyselytView} from "./kyselyt-view.js";
 import {renderTutkinnotView} from "./tutkinnot-view.js";
 import {renderTutkintoModal} from "./tutkinto-modal.js";
 import {renderAdminView} from "./admin-view.js";
 
-export const APP_VERSION = "V1.10.6";
+export const APP_VERSION = "V1.11.0";
 
 registerAction("set-tab", ({el, store}) => { store.setState({tab: el.dataset.tab}); });
 registerAction("close-modal", ({store}) => { store.setState({modal: null, editId: null}); });
@@ -61,6 +62,7 @@ const VIEW_RENDERERS = {
   invoicing: renderInvoicingView,
   reskontra: renderReskontraView,
   tasmaytys: renderTasmaytysView,
+  kirjanpito: renderKirjanpitoView,
   kyselyt: renderKyselytView,
   tutkinnot: renderTutkinnotView,
   admin: renderAdminView

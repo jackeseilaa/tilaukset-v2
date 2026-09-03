@@ -479,3 +479,15 @@ registerAction("toggle-paid", async ({id, store}) => {
   if (!inv) return;
   await fsSet("invoices", id, {paid: !inv.paid, paidDate: !inv.paid ? today() : ""}, store);
 });
+
+// Maksupäivän suora muokkaus laskurivillä (kirjanpito ryhmittelee maksetut
+// tämän päivän mukaan, ei laskun päivän). Tyhjä arvo = maksupäivä poistettu
+// mutta lasku pysyy maksettuna; päivämäärän asettaminen merkitsee myös
+// maksetuksi jos ei jo ollut.
+registerAction("set-paid-date", async ({id, value, store}) => {
+  const inv = store.getState().invoices.find(x => x.id === id);
+  if (!inv) return;
+  const patch = {paidDate: value || ""};
+  if (value && !inv.paid) patch.paid = true;
+  await fsSet("invoices", id, patch, store);
+});

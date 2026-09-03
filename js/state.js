@@ -57,6 +57,9 @@ export const initialState = {
   registerMonth: today().slice(0, 7),
   registerIssuerFilter: "all",
 
+  // Kirjanpito-välilehden vuosisuodatin ("" = uusin vuosi datassa, "all" = kaikki)
+  kirjanpitoYear: "",
+
   // Tutkinnot (modal==="tutkinto")
   tutkintoDraft: null,
   searchTutkinnot: "",
@@ -100,6 +103,7 @@ export const NAV_TABS = [
   ["invoicing", "🧾 Laskutus"],
   ["reskontra", "📊 Reskontra"],
   ["tasmaytys", "🔍 Täsmäytys"],
+  ["kirjanpito", "📆 Kirjanpito"],
   ["kyselyt", "📋 Kyselyt"],
   ["admin", "🛠️ Admin"]
 ];

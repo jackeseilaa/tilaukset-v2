@@ -26,7 +26,10 @@ function renderRegister(state) {
         <td>${esc(x.payerName || "")}${x.issuer === "oy" ? ` <span class="badge badge-blue" style="font-size:9px">AJarmo Oy</span>` : ""}</td>
         <td>${invTypeBadge(x.itype)}</td>
         <td class="r" style="font-weight:700;color:${Number(x.grossTotal || 0) < 0 ? "#991b1b" : "#0a4272"}">${Number(x.grossTotal || 0).toFixed(2)} €</td>
-        <td>${x.paid ? `<button class="btn btn-teal btn-sm" data-action="toggle-paid" data-id="${x.id}">✓ Maksettu</button>` : `<button class="btn btn-secondary btn-sm" data-action="toggle-paid" data-id="${x.id}">● Avoin</button>`}</td>
+        <td>${x.paid
+          ? `<button class="btn btn-teal btn-sm" data-action="toggle-paid" data-id="${x.id}">✓ Maksettu</button>
+             <div style="margin-top:4px"><input type="date" style="font-size:11px;padding:2px 4px;border:1px solid #d1d5db;border-radius:6px" value="${esc(x.paidDate || "")}" data-date-action="set-paid-date" data-id="${x.id}" title="Maksupäivä"></div>`
+          : `<button class="btn btn-secondary btn-sm" data-action="toggle-paid" data-id="${x.id}">● Avoin</button>`}</td>
         <td><div class="row" style="gap:4px">
           <button class="btn btn-secondary btn-sm" data-action="download-invoice-pdf" data-id="${x.id}">📄 PDF</button>
           <button class="btn btn-secondary btn-sm" data-action="edit-invoice" data-id="${x.id}">Muokkaa</button>

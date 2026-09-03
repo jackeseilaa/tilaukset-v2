@@ -65,7 +65,7 @@ export function renderReskontraView(state) {
           <td class="r">${c.totalGross.toFixed(2)} €</td>
           <td class="r" style="color:#166534">${c.totalPaid.toFixed(2)} €</td>
           <td class="r" style="font-weight:700;color:${open > 0 ? "#991b1b" : open < 0 ? "#92400e" : "#166534"}">${open.toFixed(2)} €</td>
-          <td>${c.invoices.map(inv => `<div class="small" style="margin-bottom:3px">${invTypeBadge(inv.itype)} <span style="font-weight:700;color:#0a4272">${esc(inv.invoiceNo)}</span> ${inv.paid ? `<span class="badge badge-green" style="font-size:10px">✓ ${esc(inv.paidDate || "maksettu")}</span>` : `<span class="badge badge-red" style="font-size:10px">● Avoin</span>`} <span style="color:#6b7280">${Number(inv.grossTotal || 0).toFixed(2)} €</span></div>`).join("")}</td>
+          <td>${c.invoices.map(inv => `<div class="small" style="margin-bottom:3px">${invTypeBadge(inv.itype)} <span style="font-weight:700;color:#0a4272">${esc(inv.invoiceNo)}</span> ${inv.paid ? `<span class="badge badge-green" style="font-size:10px">✓ maksettu</span> <input type="date" style="font-size:10px;padding:1px 3px" value="${esc(inv.paidDate || "")}" data-date-action="set-paid-date" data-id="${inv.id}" title="Maksupäivä">` : `<span class="badge badge-red" style="font-size:10px">● Avoin</span>`} <span style="color:#6b7280">${Number(inv.grossTotal || 0).toFixed(2)} €</span></div>`).join("")}</td>
         </tr>`;
       }).join("")}</tbody>
     </table>`}
