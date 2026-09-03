@@ -45,9 +45,15 @@ export const initialState = {
   searchCustomers: "",
   expandedPerson: null,
 
+  // Henkilön yhteystietojen kertamuokkaus (modal==="person") — päivittää
+  // nimen/puhelimen/sähköpostin kaikkiin henkilön osallistumistietueisiin
+  // kerralla, ks. customers.js: edit-person/save-person.
+  personEditKey: null,
+  personDraft: null,
+
   // Laskutus
   editInvoiceId: null,
-  invoiceDraft: {issuer: "tmi", source: "sailing", sailingId: "", tutkintoId: "", mode: "customer", type: "full", invoiceDate: today(), customerId: "", companyId: "", partialAmount: "", creditRefId: "", note: "", tuoteLines: {}, multiPersonKey: "", multiCustomerIds: {}},
+  invoiceDraft: {issuer: "tmi", source: "sailing", sailingId: "", tutkintoId: "", mode: "customer", type: "full", invoiceDate: today(), customerId: "", companyId: "", partialAmount: "", creditRefId: "", note: "", tuoteLines: {}, vatRateOverride: "", lineTextOverride: "", paymentDays: "", multiPersonKey: "", multiCustomerIds: {}, vatZeroReason: ""},
   registerMonth: today().slice(0, 7),
   registerIssuerFilter: "all",
 

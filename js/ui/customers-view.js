@@ -43,11 +43,14 @@ export function renderCustomersView(state) {
         </div>`;
       }).join("");
       return `<div class="item" style="flex-direction:column;align-items:stretch">
-        <div style="display:flex;gap:10px;align-items:center;cursor:pointer" data-action="toggle-person" data-id="${esc(p.key)}">
-          <span style="font-size:16px;color:#0a4272">${open ? "▾" : "▸"}</span>
-          <div style="flex:1"><h3>${esc(p.name || "(nimetön)")}</h3>
-          <div class="meta"><span class="badge badge-silver" style="font-size:10px">${n} osall.</span></div>
-          <div class="meta">${p.email ? `<a href="mailto:${esc(p.email)}" style="color:#1e40af">${esc(p.email)}</a>` : ""}${p.email && p.phone ? " · " : ""}${esc(p.phone || "")}</div></div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <div style="display:flex;gap:10px;align-items:center;cursor:pointer;flex:1" data-action="toggle-person" data-id="${esc(p.key)}">
+            <span style="font-size:16px;color:#0a4272">${open ? "▾" : "▸"}</span>
+            <div style="flex:1"><h3>${esc(p.name || "(nimetön)")}</h3>
+            <div class="meta"><span class="badge badge-silver" style="font-size:10px">${n} osall.</span></div>
+            <div class="meta">${p.email ? `<a href="mailto:${esc(p.email)}" style="color:#1e40af">${esc(p.email)}</a>` : ""}${p.email && p.phone ? " · " : ""}${esc(p.phone || "")}</div></div>
+          </div>
+          <button class="btn btn-secondary btn-sm" style="flex-shrink:0" data-action="edit-person" data-id="${esc(p.key)}">✎ Muokkaa tiedot</button>
         </div>
         ${open ? `<div style="margin-top:8px;display:flex;flex-direction:column;gap:6px">${rows}</div>` : ""}
       </div>`;

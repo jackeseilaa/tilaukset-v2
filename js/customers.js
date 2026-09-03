@@ -122,6 +122,43 @@ registerAction("customer-name-picked", ({store}) => {
   store.setState({customerDraft: {...d, phone: match.phone || d.phone, email: match.email || d.email}});
 });
 
+// Henkilön yhteystietojen kertamuokkaus (owner 2026-09-03: "tämä paikka olisi
+// looginen asiakastietojen muuttamiselle" — Asiakkaat-haku näytti henkilön
+// mutta ei tarjonnut suoraa tapaa muokata yhteystietoja ilman että avaa
+// jonkin yksittäisen purjehdusosallistumisen kautta). Kootaan nykyiset
+// tiedot kaikista henkilön osallistumistietueista samalla logiikalla kuin
+// customers-view.js:n ryhmittely.
+registerAction("edit-person", ({id, store}) => {
+  const state = store.getState();
+  const key = id;
+  const items = state.customers.filter(c => custIdentityKey(c) === key);
+  if (items.length === 0) return;
+  let name = "", phone = "", email = "";
+  for (const c of items) {
+    if (c.name && c.name.length > name.length) name = c.name;
+    if (!email && c.email) email = c.email;
+    if (!phone && c.phone) phone = c.phone;
+  }
+  store.setState({modal: "person", personEditKey: key, personDraft: {name, phone, email}});
+});
+
+// Kirjoittaa nimen/puhelimen/sähköpostin KAIKKIIN henkilön osallistumis-
+// tietueisiin kerralla (fsSet mergeaa, muut kentät per tietue säilyvät
+// koskemattomina). Tämä myös korjaa custIdentityKey-ryhmittelyn kerralla
+// jos jotain osallistumista puuttui yhteystieto (ks. yhdistetty lasku).
+registerAction("save-person", async ({store}) => {
+  const state = store.getState();
+  const d = state.personDraft || {};
+  const name = (d.name || "").trim();
+  if (!name) { alert("Nimi on pakollinen."); return; }
+  const phone = (d.phone || "").trim();
+  const email = (d.email || "").trim();
+  const key = state.personEditKey;
+  const items = state.customers.filter(c => custIdentityKey(c) === key);
+  await Promise.all(items.map(c => fsSet("customers", c.id, {name, phone, email}, store)));
+  store.setState({modal: null, personEditKey: null, personDraft: null});
+});
+
 registerAction("delete-customer", async ({id, store}) => {
   if (!confirm("Poistetaanko asiakas?")) return;
   await fsDel("customers", id, store);

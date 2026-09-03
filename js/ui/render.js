@@ -11,6 +11,7 @@ import {renderCompaniesView, renderCompanyModal} from "./companies-view.js";
 import {renderSailingModal} from "./sailing-modal.js";
 import {renderBlockDayModal} from "./block-day-modal.js";
 import {renderCustomerModal} from "./customer-modal.js";
+import {renderPersonModal} from "./person-modal.js";
 import {renderInvoicingView} from "./invoicing-view.js";
 import {renderMuutTuotteetView} from "./muuttuotteet-view.js";
 import {renderReskontraView} from "./reskontra-view.js";
@@ -20,7 +21,7 @@ import {renderTutkinnotView} from "./tutkinnot-view.js";
 import {renderTutkintoModal} from "./tutkinto-modal.js";
 import {renderAdminView} from "./admin-view.js";
 
-export const APP_VERSION = "V1.10.5";
+export const APP_VERSION = "V1.10.6";
 
 registerAction("set-tab", ({el, store}) => { store.setState({tab: el.dataset.tab}); });
 registerAction("close-modal", ({store}) => { store.setState({modal: null, editId: null}); });
@@ -75,6 +76,7 @@ function renderModal(state) {
   if (state.modal === "sailing") return renderSailingModal(state);
   if (state.modal === "block-day") return renderBlockDayModal(state);
   if (state.modal === "customer") return renderCustomerModal(state);
+  if (state.modal === "person") return renderPersonModal(state);
   if (state.modal === "tutkinto") return renderTutkintoModal(state);
   return "";
 }
