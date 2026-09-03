@@ -228,8 +228,7 @@ export function renderKirjanpitoView(state) {
     content = sections || `<div class="card"><div class="infobox infobox-blue">Ei laskuja valitulla jaksolla.</div></div>`;
   }
 
-  return `<style>.kp-sub{font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:#6b7280;margin:14px 0 8px}
-    @media print{.kp-print-section:not(:last-child){page-break-after:always}}</style>
+  return `<style>.kp-sub{font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:#6b7280;margin:14px 0 8px}</style>
   <div class="card noPrint">
     <div class="row-between">
       <div>
@@ -248,7 +247,55 @@ export function renderKirjanpitoView(state) {
   ${content}`;
 }
 
-registerAction("print-kirjanpito", () => window.print());
+// Tulostus avaa erittelyn omaan välilehteensä puhtaana tulostusdokumenttina
+// (oma CSS, ei sovelluksen kehyksiä). Suoraan sovellussivun window.print()
+// oli epäluotettava — osa selaimista/webnäkymistä ei tehnyt mitään. Uusi
+// välilehti myös antaa käyttäjän tallentaa PDF:ksi ja tulostaa selaimen
+// valikosta jos automaattinen tulostus estyy.
+function printDocCss() {
+  return `body{font:13px/1.5 -apple-system,'Segoe UI',Roboto,Arial,sans-serif;color:#1a1a1a;margin:24px;background:#fff}
+    h1{font-size:18px;color:#0a4272;margin:0 0 4px}
+    .meta{font-size:11px;color:#6b7280;margin-bottom:20px}
+    .card{margin:0 0 26px}
+    .card-title{font-size:15px;font-weight:700;color:#0a4272;margin-bottom:2px}
+    .card-sub{font-size:11px;color:#6b7280;margin-bottom:10px}
+    .kp-sub{font-weight:700;font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;color:#6b7280;margin:16px 0 6px}
+    .hr{border-top:1px solid #e2e8f0;margin:12px 0}
+    table.table{width:100%;border-collapse:collapse;font-size:11px}
+    table.table th,table.table td{padding:4px 7px;border-bottom:1px solid #e5e7eb;text-align:left;vertical-align:top}
+    table.table th{background:#f4f6f8;font-size:9px;text-transform:uppercase;letter-spacing:.3px;color:#555}
+    table.table td.r,table.table th.r{text-align:right;white-space:nowrap}
+    table.table tfoot td{border-top:2px solid #0a4272;border-bottom:none}
+    .small{font-size:10px}.muted{color:#6b7280}
+    .infobox{padding:8px 10px;background:#eff6ff;color:#1e3a5f;border-radius:6px;font-size:12px}
+    .toolbar{margin-bottom:18px}
+    .toolbar button{font:600 13px inherit;padding:9px 18px;border:1px solid #0a4272;background:#0a4272;color:#fff;border-radius:7px;cursor:pointer}
+    @media print{.toolbar{display:none}.card{page-break-after:always}.card:last-child{page-break-after:auto}body{margin:0}}`;
+}
+
+function buildPrintDoc(invoices, month) {
+  const sections = ISSUERS.map(([iss, label]) => monthDetailSection(iss, label, invoices, month)).join("")
+    || `<div class="infobox">Ei laskuja kuukaudelle ${fmtMonth(month)}.</div>`;
+  return `<!doctype html><html lang="fi"><head><meta charset="utf-8">
+    <title>Kirjanpidon erittely ${fmtMonth(month)}</title><style>${printDocCss()}</style></head><body>
+    <div class="toolbar"><button onclick="window.print()">🖨 Tulosta / Tallenna PDF</button></div>
+    <h1>Kirjanpidon erittely</h1>
+    <div class="meta">Kuukausi ${fmtMonth(month)} · tulostettu ${today()}</div>
+    ${sections}
+    <script>window.addEventListener('load',function(){setTimeout(function(){try{window.print();}catch(e){}},350);});<\/script>
+    </body></html>`;
+}
+
+registerAction("print-kirjanpito", ({store}) => {
+  const state = store.getState();
+  const month = state.kirjanpitoMonth || "";
+  if (!month) return;
+  const w = window.open("", "_blank");
+  if (!w) { alert("Ponnahdusikkuna estettiin. Salli ponnahdusikkunat tälle sivulle ja yritä uudelleen."); return; }
+  w.document.open();
+  w.document.write(buildPrintDoc(state.invoices || [], month));
+  w.document.close();
+});
 
 // CSV: yhteenvetotilassa rivi per yhtiö × erä × kuukausi × ALV-kanta;
 // kuukausitilassa rivi per yhtiö × erä × lasku (yksittäiset laskut eriteltyinä).
