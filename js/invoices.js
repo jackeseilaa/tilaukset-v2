@@ -348,6 +348,10 @@ registerAction("edit-invoice", ({id, store}) => {
       paymentDays: inv.paymentDays != null ? inv.paymentDays : ""
     }
   });
+  // Muokattava lomake on Laskutus-välilehden yläreunassa, laskurekisteri
+  // (josta "Muokkaa" klikattiin) sen alla — ilman tätä nappi näyttää siltä
+  // ettei se tee mitään, kun uusi tila avautuu ruudun ulkopuolelle ylös.
+  window.scrollTo({top: 0, behavior: "smooth"});
 });
 
 registerAction("new-credit-note", ({id, store}) => {
@@ -373,6 +377,7 @@ registerAction("new-credit-note", ({id, store}) => {
       paymentDays: inv.paymentDays != null ? inv.paymentDays : ""
     }
   });
+  window.scrollTo({top: 0, behavior: "smooth"});
 });
 
 registerAction("cancel-edit-invoice", ({store}) => {

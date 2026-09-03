@@ -38,7 +38,11 @@ export function initDispatch(rootEl, store) {
     const handler = actions.get(el.dataset.action);
     if (!handler) return;
     e.stopPropagation();
-    await handler({...readCtx(el), e, store});
+    // Ilman try/catchia toimintokäsittelijän poikkeus jäisi hiljaiseksi
+    // (napin klikkaus ei näyttäisi tekevän mitään) — konsoliin loki auttaa
+    // jatkossa erottamaan tämän muista "ei näy mitään" -tapauksista.
+    try { await handler({...readCtx(el), e, store}); }
+    catch (err) { console.error(`Toiminto "${el.dataset.action}" epäonnistui:`, err); }
   });
 
   // data-bind="polku.kentta" -kentät kirjoittavat suoraan state-olion polkuun
