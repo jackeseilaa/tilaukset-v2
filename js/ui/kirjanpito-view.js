@@ -1,6 +1,7 @@
 import {today, esc} from "../format.js";
 import {registerAction} from "../dispatch.js";
 import {downloadCsv} from "../csv.js";
+import {elementToPdf} from "../pdf.js";
 
 const csv2 = n => (Number(n) || 0).toFixed(2).replace(".", ",");
 
@@ -233,12 +234,12 @@ export function renderKirjanpitoView(state) {
     <div class="row-between">
       <div>
         <div class="card-title">📆 Kirjanpito</div>
-        <div class="card-sub">Kuukausierittely yrityksittäin — J Sailing Tmi ja AJarmo Oy erikseen, ALV-kannoittain. Valitse kuukausi ja tulosta erittely kirjanpitoon.</div>
+        <div class="card-sub">Kuukausierittely yrityksittäin — J Sailing Tmi ja AJarmo Oy erikseen, ALV-kannoittain. Valitse kuukausi ja lataa erittely PDF:nä kirjanpitoon.</div>
       </div>
       <div class="row" style="gap:8px;align-items:center;flex-wrap:wrap">
         ${!month ? `<select data-bind="kirjanpitoYear" style="min-width:120px">${yearOpts}</select>` : ""}
         <select data-bind="kirjanpitoMonth" style="min-width:150px">${monthOpts}</select>
-        ${month ? `<button class="btn btn-primary" data-action="print-kirjanpito">🖨 Tulosta</button>` : ""}
+        ${month ? `<button class="btn btn-primary" data-action="print-kirjanpito">📄 Lataa PDF</button>` : ""}
         <button class="btn btn-secondary" data-action="export-kirjanpito-csv">📄 Lataa CSV</button>
       </div>
     </div>
@@ -247,54 +248,100 @@ export function renderKirjanpitoView(state) {
   ${content}`;
 }
 
-// Tulostus avaa erittelyn omaan välilehteensä puhtaana tulostusdokumenttina
-// (oma CSS, ei sovelluksen kehyksiä). Suoraan sovellussivun window.print()
-// oli epäluotettava — osa selaimista/webnäkymistä ei tehnyt mitään. Uusi
-// välilehti myös antaa käyttäjän tallentaa PDF:ksi ja tulostaa selaimen
-// valikosta jos automaattinen tulostus estyy.
-function printDocCss() {
-  return `body{font:13px/1.5 -apple-system,'Segoe UI',Roboto,Arial,sans-serif;color:#1a1a1a;margin:24px;background:#fff}
-    h1{font-size:18px;color:#0a4272;margin:0 0 4px}
-    .meta{font-size:11px;color:#6b7280;margin-bottom:20px}
-    .card{margin:0 0 26px}
-    .card-title{font-size:15px;font-weight:700;color:#0a4272;margin-bottom:2px}
-    .card-sub{font-size:11px;color:#6b7280;margin-bottom:10px}
-    .kp-sub{font-weight:700;font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;color:#6b7280;margin:16px 0 6px}
-    .hr{border-top:1px solid #e2e8f0;margin:12px 0}
-    table.table{width:100%;border-collapse:collapse;font-size:11px}
-    table.table th,table.table td{padding:4px 7px;border-bottom:1px solid #e5e7eb;text-align:left;vertical-align:top}
-    table.table th{background:#f4f6f8;font-size:9px;text-transform:uppercase;letter-spacing:.3px;color:#555}
-    table.table td.r,table.table th.r{text-align:right;white-space:nowrap}
-    table.table tfoot td{border-top:2px solid #0a4272;border-bottom:none}
-    .small{font-size:10px}.muted{color:#6b7280}
-    .infobox{padding:8px 10px;background:#eff6ff;color:#1e3a5f;border-radius:6px;font-size:12px}
-    .toolbar{margin-bottom:18px}
-    .toolbar button{font:600 13px inherit;padding:9px 18px;border:1px solid #0a4272;background:#0a4272;color:#fff;border-radius:7px;cursor:pointer}
-    @media print{.toolbar{display:none}.card{page-break-after:always}.card:last-child{page-break-after:auto}body{margin:0}}`;
+// PDF-lataus: rasteroidaan erittely näkymättömästi liitetystä A4-levyisestä
+// elementistä ja tallennetaan tiedostoksi. Ei window.print()-kutsua eikä uutta
+// välilehteä — molemmat osoittautuivat epäluotettaviksi käyttäjän ympäristössä
+// (webnäkymä jossa window.print() ei tee mitään). Sama html2canvas+jsPDF-
+// putki kuin laskujen PDF:ssä (js/pdf.js), joka toimii tässä ympäristössä.
+function pdfSheetCss() {
+  return `#kpSheet{width:794px;padding:44px 52px;background:#fff;font-family:Arial,Helvetica,sans-serif;color:#1a1a1a}
+    #kpSheet h1{font-size:19px;color:#0a4272;margin:0 0 3px}
+    #kpSheet .meta{font-size:11px;color:#6b7280;margin-bottom:22px}
+    #kpSheet .sec{margin:0 0 30px}
+    #kpSheet .sec-title{font-size:15px;font-weight:700;color:#0a4272;margin-bottom:1px}
+    #kpSheet .sec-sub{font-size:10.5px;color:#6b7280;margin-bottom:10px}
+    #kpSheet .kp-sub{font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#6b7280;margin:14px 0 5px}
+    #kpSheet table{width:100%;border-collapse:collapse;font-size:10.5px}
+    #kpSheet th,#kpSheet td{padding:3px 6px;border-bottom:1px solid #e5e7eb;text-align:left;vertical-align:top}
+    #kpSheet th{background:#f4f6f8;font-size:8.5px;text-transform:uppercase;letter-spacing:.3px;color:#555}
+    #kpSheet td.r,#kpSheet th.r{text-align:right;white-space:nowrap}
+    #kpSheet tfoot td{border-top:2px solid #0a4272;border-bottom:none;font-weight:700}
+    #kpSheet .small{font-size:9.5px}#kpSheet .muted{color:#6b7280}
+    #kpSheet .empty{padding:6px 0;font-size:11px;color:#6b7280}`;
 }
 
-function buildPrintDoc(invoices, month) {
-  const sections = ISSUERS.map(([iss, label]) => monthDetailSection(iss, label, invoices, month)).join("")
-    || `<div class="infobox">Ei laskuja kuukaudelle ${fmtMonth(month)}.</div>`;
-  return `<!doctype html><html lang="fi"><head><meta charset="utf-8">
-    <title>Kirjanpidon erittely ${fmtMonth(month)}</title><style>${printDocCss()}</style></head><body>
-    <div class="toolbar"><button onclick="window.print()">🖨 Tulosta / Tallenna PDF</button></div>
+// Erittely PDF-levylle — sama sisältö kuin ruudulla, mutta luokat scopetettu
+// #kpSheet:iin jotta html2canvas piirtää sen oikein irrallaan sovelluksen CSS:stä.
+function detailBlock(title, list, dateField) {
+  const showPaid = dateField === "paidDate";
+  if (list.length === 0) return `<div class="kp-sub">${title} (0 kpl)</div><div class="empty">Ei laskuja.</div>`;
+  const rateTotals = new Map();
+  let tNet = 0, tVat = 0, tGross = 0;
+  const rows = list.map(inv => {
+    let net = 0, vat = 0, gross = 0;
+    for (const b of rateBuckets(inv)) {
+      net += b.net; vat += b.vat; gross += b.gross;
+      if (!rateTotals.has(b.ratePct)) rateTotals.set(b.ratePct, {net: 0, vat: 0});
+      const rt = rateTotals.get(b.ratePct); rt.net += b.net; rt.vat += b.vat;
+    }
+    tNet += net; tVat += vat; tGross += gross;
+    return `<tr>
+      <td style="white-space:nowrap;color:#0a4272;font-weight:700">${esc(inv.invoiceNo || "")}</td>
+      <td style="white-space:nowrap">${esc(inv.invoiceDate || "")}</td>
+      ${showPaid ? `<td style="white-space:nowrap">${esc(inv.paidDate || "")}</td>` : ""}
+      <td>${esc(inv.payerName || "")}</td>
+      <td class="small muted">${esc(inv.eventName || "")}</td>
+      <td class="r">${fmtEur(net)}</td><td class="r">${fmtEur(vat)}</td><td class="r">${fmtEur(gross)}</td>
+    </tr>`;
+  }).join("");
+  const rateSummary = [...rateTotals.entries()].sort((a, b) => b[0] - a[0])
+    .map(([r, v]) => `ALV ${fmtRate(r)}: netto ${fmtEur(v.net)}, vero ${fmtEur(v.vat)}`).join("  ·  ");
+  return `<div class="kp-sub">${title} (${list.length} kpl)</div>
+    <table>
+      <thead><tr><th>Nro</th><th>Laskun pvm</th>${showPaid ? "<th>Maksupäivä</th>" : ""}<th>Maksaja</th><th>Tapahtuma</th>
+        <th class="r">Netto</th><th class="r">ALV</th><th class="r">Brutto</th></tr></thead>
+      <tbody>${rows}</tbody>
+      <tfoot>
+        <tr><td colspan="${showPaid ? 5 : 4}">Yhteensä</td><td class="r">${fmtEur(tNet)}</td><td class="r">${fmtEur(tVat)}</td><td class="r">${fmtEur(tGross)}</td></tr>
+        <tr><td colspan="8" class="small muted" style="font-weight:400;padding-top:5px">${rateSummary || "—"}</td></tr>
+      </tfoot>
+    </table>`;
+}
+
+function buildKpSheetInner(invoices, month) {
+  const blocks = ISSUERS.map(([iss, label]) => {
+    const issInv = invoices.filter(x => issuerKey(x) === iss);
+    const billed = issInv.filter(x => inMonth(x.invoiceDate, month)).sort((a, b) => (a.invoiceNo || "").localeCompare(b.invoiceNo || ""));
+    const paid = issInv.filter(x => x.paid && inMonth(x.paidDate, month)).sort((a, b) => (a.paidDate || "").localeCompare(b.paidDate || ""));
+    if (billed.length === 0 && paid.length === 0) return "";
+    return `<div class="sec">
+      <div class="sec-title">${label}</div>
+      <div class="sec-sub">Laskutetut laskun päivän mukaan · maksetut maksupäivän mukaan</div>
+      ${detailBlock("Laskutetut", billed, "invoiceDate")}
+      ${detailBlock("Maksetut", paid, "paidDate")}
+    </div>`;
+  }).join("");
+  return `<div id="kpSheet">
     <h1>Kirjanpidon erittely</h1>
     <div class="meta">Kuukausi ${fmtMonth(month)} · tulostettu ${today()}</div>
-    ${sections}
-    <script>window.addEventListener('load',function(){setTimeout(function(){try{window.print();}catch(e){}},350);});<\/script>
-    </body></html>`;
+    ${blocks || `<div class="empty">Ei laskuja kuukaudelle ${fmtMonth(month)}.</div>`}
+  </div>`;
 }
 
-registerAction("print-kirjanpito", ({store}) => {
+registerAction("print-kirjanpito", async ({store}) => {
   const state = store.getState();
   const month = state.kirjanpitoMonth || "";
   if (!month) return;
-  const w = window.open("", "_blank");
-  if (!w) { alert("Ponnahdusikkuna estettiin. Salli ponnahdusikkunat tälle sivulle ja yritä uudelleen."); return; }
-  w.document.open();
-  w.document.write(buildPrintDoc(state.invoices || [], month));
-  w.document.close();
+  if (!window.html2canvas || !window.jspdf) { alert("PDF-kirjastot eivät latautuneet. Lataa sivu uudelleen ja yritä uudelleen."); return; }
+  const wrapper = document.createElement("div");
+  wrapper.style.cssText = "position:fixed;left:-9999px;top:0;width:794px;background:#fff;z-index:-1";
+  wrapper.innerHTML = `<style>${pdfSheetCss()}</style>${buildKpSheetInner(state.invoices || [], month)}`;
+  document.body.appendChild(wrapper);
+  try {
+    await elementToPdf(wrapper.querySelector("#kpSheet"), `kirjanpito_${month}.pdf`);
+  } finally {
+    document.body.removeChild(wrapper);
+  }
 });
 
 // CSV: yhteenvetotilassa rivi per yhtiö × erä × kuukausi × ALV-kanta;

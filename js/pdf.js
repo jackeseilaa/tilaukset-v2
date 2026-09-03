@@ -136,6 +136,33 @@ function buildInvoiceSheetHtml(inv) {
   return {html, barcodeValue};
 }
 
+// Rasteroi näkyvän (tai näkymättömästi liitetyn) elementin A4-portrait-PDF:ksi
+// ja tallentaa sen. Jaettu laskujen ja kirjanpidon erittelyn kesken. Toimii
+// ilman window.print()-kutsua (osa selaimista/webnäkymistä ei tue sitä).
+export async function elementToPdf(sheetEl, filename) {
+  const canvas = await window.html2canvas(sheetEl, {scale: 2, useCORS: true, backgroundColor: "#ffffff", logging: false});
+  const {jsPDF} = window.jspdf;
+  const pdf = new jsPDF({orientation: "portrait", unit: "mm", format: "a4"});
+  const iw = 210, ih = (canvas.height * iw) / canvas.width;
+  if (ih <= 297) {
+    pdf.addImage(canvas.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, iw, ih);
+  } else {
+    // Useampisivuinen — leikataan canvas A4-korkuisiin paloihin ja lisätään
+    // jokainen omalle sivulleen.
+    let y = 0;
+    while (y < canvas.height) {
+      const ph = Math.min(297 * (canvas.width / iw), canvas.height - y);
+      const tc = document.createElement("canvas");
+      tc.width = canvas.width; tc.height = ph;
+      tc.getContext("2d").drawImage(canvas, 0, y, canvas.width, ph, 0, 0, canvas.width, ph);
+      if (y > 0) pdf.addPage();
+      pdf.addImage(tc.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, iw, ph * (iw / canvas.width));
+      y += ph;
+    }
+  }
+  pdf.save(filename);
+}
+
 export async function downloadInvoicePdf(inv) {
   if (!window.html2canvas || !window.jspdf) { alert("PDF-kirjastot eivät latautuneet. Tarkista internetyhteys ja lataa sivu uudelleen."); return; }
   const {html, barcodeValue} = buildInvoiceSheetHtml(inv);
@@ -148,28 +175,7 @@ export async function downloadInvoicePdf(inv) {
       const barEl = wrapper.querySelector("#pdfBarcode");
       try { window.JsBarcode(barEl, barcodeValue, {format: "CODE128", width: 1.5, height: 44, displayValue: false, margin: 0}); } catch {}
     }
-    const sheet = wrapper.querySelector("#pdfSheet");
-    const canvas = await window.html2canvas(sheet, {scale: 2, useCORS: true, backgroundColor: "#ffffff", logging: false});
-    const {jsPDF} = window.jspdf;
-    const pdf = new jsPDF({orientation: "portrait", unit: "mm", format: "a4"});
-    const iw = 210, ih = (canvas.height * iw) / canvas.width;
-    if (ih <= 297) {
-      pdf.addImage(canvas.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, iw, ih);
-    } else {
-      // Useampisivuinen laskutus (paljon rivejä) — leikataan canvas A4-korkuisiin
-      // paloihin ja lisätään jokainen omalle sivulleen.
-      let y = 0;
-      while (y < canvas.height) {
-        const ph = Math.min(297 * (canvas.width / iw), canvas.height - y);
-        const tc = document.createElement("canvas");
-        tc.width = canvas.width; tc.height = ph;
-        tc.getContext("2d").drawImage(canvas, 0, y, canvas.width, ph, 0, 0, canvas.width, ph);
-        if (y > 0) pdf.addPage();
-        pdf.addImage(tc.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, iw, ph * (iw / canvas.width));
-        y += ph;
-      }
-    }
-    pdf.save(`${(inv.invoiceNo || "lasku").replace(/[^\w.-]/g, "_")}.pdf`);
+    await elementToPdf(wrapper.querySelector("#pdfSheet"), `${(inv.invoiceNo || "lasku").replace(/[^\w.-]/g, "_")}.pdf`);
   } finally {
     document.body.removeChild(wrapper);
   }
