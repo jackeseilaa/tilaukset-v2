@@ -1,7 +1,7 @@
 import {today, esc} from "../format.js";
 import {registerAction} from "../dispatch.js";
 import {downloadCsv} from "../csv.js";
-import {elementToPdf} from "../pdf.js";
+import {elementsToPdf} from "../pdf.js";
 
 const csv2 = n => (Number(n) || 0).toFixed(2).replace(".", ",");
 
@@ -254,20 +254,17 @@ export function renderKirjanpitoView(state) {
 // (webnäkymä jossa window.print() ei tee mitään). Sama html2canvas+jsPDF-
 // putki kuin laskujen PDF:ssä (js/pdf.js), joka toimii tässä ympäristössä.
 function pdfSheetCss() {
-  return `#kpSheet{width:794px;padding:44px 52px;background:#fff;font-family:Arial,Helvetica,sans-serif;color:#1a1a1a}
-    #kpSheet h1{font-size:19px;color:#0a4272;margin:0 0 3px}
-    #kpSheet .meta{font-size:11px;color:#6b7280;margin-bottom:22px}
-    #kpSheet .sec{margin:0 0 30px}
-    #kpSheet .sec-title{font-size:15px;font-weight:700;color:#0a4272;margin-bottom:1px}
-    #kpSheet .sec-sub{font-size:10.5px;color:#6b7280;margin-bottom:10px}
-    #kpSheet .kp-sub{font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#6b7280;margin:14px 0 5px}
-    #kpSheet table{width:100%;border-collapse:collapse;font-size:10.5px}
-    #kpSheet th,#kpSheet td{padding:3px 6px;border-bottom:1px solid #e5e7eb;text-align:left;vertical-align:top}
-    #kpSheet th{background:#f4f6f8;font-size:8.5px;text-transform:uppercase;letter-spacing:.3px;color:#555}
-    #kpSheet td.r,#kpSheet th.r{text-align:right;white-space:nowrap}
-    #kpSheet tfoot td{border-top:2px solid #0a4272;border-bottom:none;font-weight:700}
-    #kpSheet .small{font-size:9.5px}#kpSheet .muted{color:#6b7280}
-    #kpSheet .empty{padding:6px 0;font-size:11px;color:#6b7280}`;
+  return `.kpSheet{width:794px;padding:44px 52px;background:#fff;font-family:Arial,Helvetica,sans-serif;color:#1a1a1a}
+    .kpSheet h1{font-size:18px;color:#0a4272;margin:0 0 3px}
+    .kpSheet .meta{font-size:11px;color:#6b7280;margin-bottom:20px}
+    .kpSheet .kp-sub{font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#6b7280;margin:16px 0 5px}
+    .kpSheet table{width:100%;border-collapse:collapse;font-size:10.5px}
+    .kpSheet th,.kpSheet td{padding:3px 6px;border-bottom:1px solid #e5e7eb;text-align:left;vertical-align:top}
+    .kpSheet th{background:#f4f6f8;font-size:8.5px;text-transform:uppercase;letter-spacing:.3px;color:#555}
+    .kpSheet td.r,.kpSheet th.r{text-align:right;white-space:nowrap}
+    .kpSheet tfoot td{border-top:2px solid #0a4272;border-bottom:none;font-weight:700}
+    .kpSheet .small{font-size:9.5px}.kpSheet .muted{color:#6b7280}
+    .kpSheet .empty{padding:6px 0;font-size:11px;color:#6b7280}`;
 }
 
 // Erittely PDF-levylle — sama sisältö kuin ruudulla, mutta luokat scopetettu
@@ -308,24 +305,22 @@ function detailBlock(title, list, dateField) {
     </table>`;
 }
 
-function buildKpSheetInner(invoices, month) {
-  const blocks = ISSUERS.map(([iss, label]) => {
+// Yksi levy per yhtiö (joilla on dataa) → sivunvaihto yhtiöiden väliin PDF:ssä.
+function buildKpSheets(invoices, month) {
+  const sheets = [];
+  for (const [iss, label] of ISSUERS) {
     const issInv = invoices.filter(x => issuerKey(x) === iss);
     const billed = issInv.filter(x => inMonth(x.invoiceDate, month)).sort((a, b) => (a.invoiceNo || "").localeCompare(b.invoiceNo || ""));
     const paid = issInv.filter(x => x.paid && inMonth(x.paidDate, month)).sort((a, b) => (a.paidDate || "").localeCompare(b.paidDate || ""));
-    if (billed.length === 0 && paid.length === 0) return "";
-    return `<div class="sec">
-      <div class="sec-title">${label}</div>
-      <div class="sec-sub">Laskutetut laskun päivän mukaan · maksetut maksupäivän mukaan</div>
+    if (billed.length === 0 && paid.length === 0) continue;
+    sheets.push(`<div class="kpSheet">
+      <h1>Kirjanpidon erittely — ${esc(label)}</h1>
+      <div class="meta">Kuukausi ${fmtMonth(month)} · tulostettu ${today()} · laskutetut laskun päivän mukaan, maksetut maksupäivän mukaan</div>
       ${detailBlock("Laskutetut", billed, "invoiceDate")}
       ${detailBlock("Maksetut", paid, "paidDate")}
-    </div>`;
-  }).join("");
-  return `<div id="kpSheet">
-    <h1>Kirjanpidon erittely</h1>
-    <div class="meta">Kuukausi ${fmtMonth(month)} · tulostettu ${today()}</div>
-    ${blocks || `<div class="empty">Ei laskuja kuukaudelle ${fmtMonth(month)}.</div>`}
-  </div>`;
+    </div>`);
+  }
+  return sheets;
 }
 
 registerAction("print-kirjanpito", async ({store}) => {
@@ -333,12 +328,14 @@ registerAction("print-kirjanpito", async ({store}) => {
   const month = state.kirjanpitoMonth || "";
   if (!month) return;
   if (!window.html2canvas || !window.jspdf) { alert("PDF-kirjastot eivät latautuneet. Lataa sivu uudelleen ja yritä uudelleen."); return; }
+  const sheets = buildKpSheets(state.invoices || [], month);
+  if (sheets.length === 0) { alert(`Ei laskuja kuukaudelle ${fmtMonth(month)}.`); return; }
   const wrapper = document.createElement("div");
   wrapper.style.cssText = "position:fixed;left:-9999px;top:0;width:794px;background:#fff;z-index:-1";
-  wrapper.innerHTML = `<style>${pdfSheetCss()}</style>${buildKpSheetInner(state.invoices || [], month)}`;
+  wrapper.innerHTML = `<style>${pdfSheetCss()}</style>${sheets.join("")}`;
   document.body.appendChild(wrapper);
   try {
-    await elementToPdf(wrapper.querySelector("#kpSheet"), `kirjanpito_${month}.pdf`);
+    await elementsToPdf([...wrapper.querySelectorAll(".kpSheet")], `kirjanpito_${month}.pdf`);
   } finally {
     document.body.removeChild(wrapper);
   }

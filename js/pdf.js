@@ -136,31 +136,38 @@ function buildInvoiceSheetHtml(inv) {
   return {html, barcodeValue};
 }
 
-// Rasteroi näkyvän (tai näkymättömästi liitetyn) elementin A4-portrait-PDF:ksi
-// ja tallentaa sen. Jaettu laskujen ja kirjanpidon erittelyn kesken. Toimii
-// ilman window.print()-kutsua (osa selaimista/webnäkymistä ei tue sitä).
-export async function elementToPdf(sheetEl, filename) {
-  const canvas = await window.html2canvas(sheetEl, {scale: 2, useCORS: true, backgroundColor: "#ffffff", logging: false});
+// Rasteroi joukon näkymättömästi liitettyjä elementtejä yhdeksi A4-portrait-
+// PDF:ksi ja tallentaa sen. Jokainen elementti alkaa aina uudelta sivulta
+// (esim. kirjanpidon erittelyssä yksi elementti per yhtiö → sivunvaihto
+// yhtiöiden väliin); yhtä elementtiä pidempi sisältö siivutetaan A4-korkuisiin
+// paloihin. Toimii ilman window.print()-kutsua (osa selaimista/webnäkymistä
+// ei tue sitä).
+export async function elementsToPdf(sheetEls, filename) {
   const {jsPDF} = window.jspdf;
   const pdf = new jsPDF({orientation: "portrait", unit: "mm", format: "a4"});
-  const iw = 210, ih = (canvas.height * iw) / canvas.width;
-  if (ih <= 297) {
-    pdf.addImage(canvas.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, iw, ih);
-  } else {
-    // Useampisivuinen — leikataan canvas A4-korkuisiin paloihin ja lisätään
-    // jokainen omalle sivulleen.
+  const iw = 210;
+  let first = true;
+  for (const el of sheetEls) {
+    const canvas = await window.html2canvas(el, {scale: 2, useCORS: true, backgroundColor: "#ffffff", logging: false});
+    const pageHpx = 297 * (canvas.width / iw);
     let y = 0;
     while (y < canvas.height) {
-      const ph = Math.min(297 * (canvas.width / iw), canvas.height - y);
+      const ph = Math.min(pageHpx, canvas.height - y);
       const tc = document.createElement("canvas");
       tc.width = canvas.width; tc.height = ph;
       tc.getContext("2d").drawImage(canvas, 0, y, canvas.width, ph, 0, 0, canvas.width, ph);
-      if (y > 0) pdf.addPage();
+      if (!first) pdf.addPage();
+      first = false;
       pdf.addImage(tc.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, iw, ph * (iw / canvas.width));
       y += ph;
     }
   }
   pdf.save(filename);
+}
+
+// Yksittäinen elementti → PDF (laskujen PDF-lataus).
+export async function elementToPdf(sheetEl, filename) {
+  await elementsToPdf([sheetEl], filename);
 }
 
 export async function downloadInvoicePdf(inv) {
