@@ -1,6 +1,7 @@
 import {esc} from "../format.js";
 import {TUTKINTO_TYPES} from "../state.js";
 import {statusBadge} from "../customers.js";
+import {gcalButtonTutkinto} from "../gcal.js";
 
 export function renderTutkintoModal(state) {
   const editing = !!state.editId;
@@ -30,7 +31,7 @@ export function renderTutkintoModal(state) {
         <div class="field"><label class="lbl">Paikka</label><input data-bind="tutkintoDraft.location" value="${esc(d.location || "")}" placeholder="esim. Laivakoulu, Loviisa"></div>
       </div>
       <div class="field"><label class="lbl">Lisätiedot</label><textarea data-bind="tutkintoDraft.notes" rows="2" placeholder="Esim. ohjaaja, vaatimukset, huomiot…">${esc(d.notes || "")}</textarea></div>
-      <div class="row" style="justify-content:flex-end;margin-top:16px"><button class="btn btn-primary" data-action="save-tutkinto">${editing ? "Tallenna muutokset" : "Tallenna"}</button></div>
+      <div class="row" style="justify-content:flex-end;align-items:center;gap:6px;flex-wrap:wrap;margin-top:16px">${editing ? gcalButtonTutkinto(state.tutkinnot.find(t => t.id === state.editId)) : ""}<button class="btn btn-primary" data-action="save-tutkinto">${editing ? "Tallenna muutokset" : "Tallenna"}</button></div>
       ${editing ? renderTutkintoParticipants(state) : ""}
     </div>
   </div></div>`;

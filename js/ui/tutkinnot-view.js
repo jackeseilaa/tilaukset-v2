@@ -1,5 +1,6 @@
 import {esc, fmtDate} from "../format.js";
 import {TUTKINTO_TYPES} from "../state.js";
+import {gcalButtonTutkinto} from "../gcal.js";
 
 export function renderTutkinnotView(state) {
   const term = (state.searchTutkinnot || "").toLowerCase();
@@ -35,7 +36,8 @@ export function renderTutkinnotView(state) {
           <td><div class="row" style="gap:6px">
             <button class="btn btn-secondary btn-sm" data-action="edit-tutkinto" data-id="${t.id}">Muokkaa</button>
             <button class="btn btn-danger btn-sm" data-action="delete-tutkinto" data-id="${t.id}">Poista</button>
-          </div></td>
+          </div>
+          <div class="row" style="gap:6px;margin-top:6px;flex-wrap:wrap">${gcalButtonTutkinto(t)}</div></td>
         </tr>`;
       }).join("")}</tbody>
     </table>`}
