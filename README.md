@@ -4,7 +4,7 @@ Tilaus- ja laskutushallinta Absolut 37 -purjehdusristeilyille (vene s/y Quartet,
 
 **Miksi tämä on olemassa:** vanha sovellus on yksi 345 kt:n tiedosto, 400+ committia, kertynyttä monimutkaisuutta. Tämä on sama toiminnallisuus uudelleenkirjoitettuna moduuleiksi jaettuna, samalla Firebase/Firestore-reaaliaikaisuudella, mutta ilman build-työkalua (ei npm/Vite/React selaimessa — pelkkä `<script type="module">`, sama nolla-build GitHub Pages -julkaisu kuin vanhassa).
 
-## Tila: käytössä, v1.11.4 (päivitetty 2026-09-18)
+## Tila: käytössä, V1.11.5 (päivitetty 2026-10-05)
 
 Tehty:
 - Kirjautuminen (Google, rajattu `jacke.seilaa@gmail.com`), reaaliaikainen Firestore-kytkentä kokoelmille + `meta`.
