@@ -10,7 +10,7 @@ export function renderTutkinnotView(state) {
   for (const t of state.tutkinnot) typeCounts[t.type] = (typeCounts[t.type] || 0) + 1;
 
   return `<div class="card">
-    <div class="row-between"><div><div class="card-title">🎓 Tutkinnot</div><div class="card-sub">Suoritetut näyttökokeet ja pätevyydet</div></div><button class="btn btn-primary" data-action="new-tutkinto">+ Uusi tutkinto</button></div>
+    <div class="row-between"><div><div class="card-title">🎓 Tutkinnot</div><div class="card-sub">Suoritetut näyttökokeet ja pätevyydet</div></div><div class="row" style="gap:8px">${state.tutkinnot.length > 0 ? `<button class="btn btn-teal" data-action="export-tutkinnot-xlsx">📥 Lataa Excel-raportti</button>` : ""}<button class="btn btn-primary" data-action="new-tutkinto">+ Uusi tutkinto</button></div></div>
     ${state.tutkinnot.length > 0 ? `<div class="stats-grid" style="margin:16px 0">${TUTKINTO_TYPES.map(t => `<div class="stat-card"><div class="stat-label" style="font-size:10px">${esc(t)}</div><div class="stat-val" style="font-size:28px;color:#1e40af">${typeCounts[t] || 0}</div></div>`).join("")}</div>` : ""}
     <div class="hr"></div>
     <div class="field"><label class="lbl">Haku</label><input data-bind="searchTutkinnot" value="${esc(state.searchTutkinnot || "")}" placeholder="Hae tutkintotyypillä tai päivällä…"></div>

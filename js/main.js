@@ -17,6 +17,7 @@ import "./calendar.js";
 import "./customers.js";
 import "./invoices.js";
 import "./tutkinnot.js";
+import "./tutkinnot-report.js";
 import "./gcal.js";
 import "./admin.js";
 import "./backup.js";
